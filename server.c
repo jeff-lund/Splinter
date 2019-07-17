@@ -57,8 +57,6 @@ int main(int argc, char* argv[])
         int peer;
         peer = s_accept(sock);
         if (peer > 0) {
-            //do_non_interactive_loop(peer, STDERR_FILENO);
-						printf("zzzzz\n");
             close(peer);
         } else {
             break;
