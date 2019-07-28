@@ -11,9 +11,9 @@
 
 #define _POSIX_SOURCE 1
 
-sig_atomic_t g_terminate;
+sig_atomic_t term;
 
-void signal_handler(int nr) { g_terminate = 1; }
+void signal_handler(int nr) { term = 1; }
 
 int main(int argc, char* argv[])
 {
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 
     fprintf(stderr, "pid: %d\n", getpid());
 
-    while (!g_terminate) {
+    while (!term) {
         int peer;
         peer = s_accept(sock);
         if (peer > 0) {
