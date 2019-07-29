@@ -13,70 +13,70 @@
 
 sig_atomic_t term;
 
-void signal_handler(int nr) { term = 1; }
+void sig_hand(int i) { term = 1; }
 
 int main(int argc, char* argv[])
 {
-    int sock;
-    int rc;
-    char* buf;
-    int bufsize = 4096;
-    struct server *server = 0;
-    int backlog = 10;
+  int sock;
+  int rc;
+  char* buf;
+  int bufsize = 4096;
+  struct server *server = 0;
+  int backlog = 10;
 
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGUSR1, signal_handler);
+  signal(SIGINT, sig_hand);
+  signal(SIGTERM, sig_hand);
+  signal(SIGUSR1, sig_hand);
 
-    server = alloc_serverinfo();
-    getconnectioninfo(server, argc, argv);
+  server = alloc_serverinfo();
+  getconnectioninfo(server, argc, argv);
 
-    sock = -1;
+  sock = -1;
 
-    buf = malloc(bufsize);
-    if (!buf) {
-        goto out;
-    }
-    memset(buf, 0, bufsize);
+  buf = malloc(bufsize);
+  if (!buf) {
+    goto out;
+  }
+  memset(buf, 0, bufsize);
 
-		sock = s_bind(host(server), port(server));
-    if (sock < 0) {
-        fprintf(stderr, "(%s:%d) %s(), Binding Operation Returned: %d\n", __FILE__, __LINE__, __FUNCTION__, sock);
-        goto out;
-    }
+	sock = s_bind(host(server), port(server));
+  if (sock < 0) {
+		printf("error on bind() when binding to host and port\n");
+    goto out;
+  }
 
-    rc = listen(sock, backlog);
-    if (rc < 0) {
-        fprintf(stderr, "(%s:%d) %s(), listen() returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
-        goto out;
-    }
+  rc = listen(sock, backlog);
+  if (rc < 0) {
+		printf("Listen() returned when listening to sock.\n");
+    goto out;
+  }
 
-    fprintf(stderr, "pid: %d\n", getpid());
+  fprintf(stderr, "pid: %d\n", getpid());
 
-    while (!term) {
-        int peer;
-        peer = s_accept(sock);
-        if (peer > 0) {
-            close(peer);
-        } else {
-            break;
-        }
+  while (!term) {
+    int peer;
+    peer = s_accept(sock);
+      
+		if (peer > 0) {
+			server_loop(peer, STDERR_FILENO);
+      close(peer);
+    } 
+		else
+      break;   
     } 
 
     fprintf(stderr, "good-bye.\n");
 
 out:
-    if (sock > 0) {
-        close(sock);
-    }
+  if(sock > 0) 
+    close(sock);
+    
+  if(buf)
+    free(buf); 
 
-    if (buf) {
-        free(buf);
-    }
+	if(server != 0)
+		free(server);
 
-		if(server != 0)
-			free(server);
-
-    return 0;
+  return 0;
 }
 

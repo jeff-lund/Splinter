@@ -4,6 +4,9 @@
 #include <getopt.h>
 #include "connectioninfo.h"
 
+#define LINEMAX 4096
+
+
 static const char* DEFAULT_HOST = "10.0.0.69"; // means "any suitable interface"
 static const char* DEFAULT_PORT = "8080";
 
@@ -81,4 +84,61 @@ port(struct server *server)
 		port = server->port;
 
 	return port;
+}
+
+int
+serverresponse(int server_fd)
+{
+	int rc, timeout, buffersize, finished;
+	char *buffer;
+	struct pollfd server;
+	
+	server.fd = server_fd;
+	server.events = POLLIN;
+	server.revents = 0;
+
+	done = 0;
+	timeout = 5000; //Wait till server times out
+
+	buffersize = LINEMAX;
+	buffer = malloc(buffersize);
+
+	if(!buffer)
+		return -1;
+	
+	while(!finished) {
+		int poll_server;
+
+		poll_server = poll(&server, 1, timeout);
+
+		if(poll_server == 0) {
+			printf("Error serverresponse(), poll returned 0, timed out");
+			done = 1;
+		}
+		
+		if(poll_server < 0) {
+			printf("Error serverresponse(), poll returned greter then 1");
+			done = 1;
+		}
+
+		else {
+			int server_r = 0;
+			memset(buffer, 0, buffersize);
+			server_r = read(server_fd, buffer, buffersize - 1);
+			if(server_r > 0) {
+				fprintf(stdout, "%s", buffer);
+				done = 1;
+			}
+			
+			else {
+				printf("Issue with read in serverresponse()");
+				done = 1;
+			}	
+		}
+	}
+
+	if(buffer)
+		free(buffer);
+
+	return rc;
 }

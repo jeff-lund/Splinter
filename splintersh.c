@@ -376,7 +376,7 @@ pipeExec(char ** cmds, int npipes)
 }
 
 int
-main(void)
+splinter(int server_fd)
 {
   long MAX = sysconf(_SC_LINE_MAX);
   char buf[MAX];
@@ -438,6 +438,9 @@ main(void)
       if ((pid = waitpid(pid, &status, 0)) < 0)
         Error(EXIT_FAILURE, errno, "waitpid error");
     }
+
+		write(server_fd, buf, MAX);
+		serverresponse(server_fd);	
   } while(1);
   exit(EXIT_SUCCESS);
 }
