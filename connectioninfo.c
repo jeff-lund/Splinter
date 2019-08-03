@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <getopt.h>
+#include <poll.h>
 #include "connectioninfo.h"
 
 #define LINEMAX 4096
@@ -97,7 +99,7 @@ serverresponse(int server_fd)
 	server.events = POLLIN;
 	server.revents = 0;
 
-	done = 0;
+	int done = 0;
 	timeout = 5000; //Wait till server times out
 
 	buffersize = LINEMAX;

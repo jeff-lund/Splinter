@@ -16,7 +16,7 @@
 #include "connectioninfo.h"
 
 #define _POSIX_SOURCE 1
-
+#define MAX 1028
 #define EOT 0x04
 
 int 
@@ -43,7 +43,7 @@ server_loop(int client_fd, int log_fd)
 	while(1) {
 		int rc;
 		memset(buffer, 0, MAX);
-		rc = read(client_fd, buffer, MAX - 1)
+		rc = read(client_fd, buffer, MAX - 1);
 		if(rc == 0) {
 			printf("The client hungup\n");
 			break;
@@ -54,8 +54,8 @@ server_loop(int client_fd, int log_fd)
 			break;
 		}
 
-		exec_command_remotely(buf, rc, client_fd);
-		buf[0] = EOT;
+		exec_command_remotely(buffer, rc, client_fd);
+		buffer[0] = EOT;
 		write(client_fd, buffer, 1);
 	}
 

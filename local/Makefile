@@ -1,5 +1,5 @@
 main: main.c
-	gcc -g main.c initialize.c
+	gcc -g -Wall main.c initialize.c
 
 clean:
-	rm -rf .splinter/
+	rm -rf .splinter/ a.out

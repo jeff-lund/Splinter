@@ -15,12 +15,14 @@
 #include <error.h>
 #include <errno.h>
 #include <getopt.h>
-#include "initialize.h"
 
+#include "initialize.h"
+#include "start.h"
+
+#define ARGSTRING "c:i:s:"
 #define O_INIT 0x1
 #define O_START 0x2
 #define O_CONNECT 0x4
-#define ARGSTRING "c:i:s:"
 #define N_LONG_ARGS 3
 #define MAND_ARG 1
 #define OPTIONAL_ARG 2
@@ -33,7 +35,7 @@ char* parseOpts(char*, int, char**);
 int
 main(int argc, char *argv[])
 {
-  char *name, *path = NULL;
+  char *path = NULL;
   char startFlag = 0x0;
   // check options connect/init/start
   path = parseOpts(&startFlag, argc, argv);
@@ -41,16 +43,15 @@ main(int argc, char *argv[])
   if(startFlag == O_INIT)
   {
     // Initialize new splinter at path and start up
-    printf("Init\n");
     if(initialize(path) < 0)
       error(EXIT_FAILURE, 0, "initialization failed");
-    //start(path);
+    startSplinter(path);
   }
   else if(startFlag == O_START)
   {
     // Start existing splinter
     printf("Start\n");
-    //start(path);
+    startSplinter(path);
   }
   else if(startFlag == O_CONNECT)
   {
