@@ -15,8 +15,9 @@
 #define N_P1 10
 #define N_P2 12
 #define N_P3 10
-#define CONFIG_STR "/.splinterconfig"
+#define CONFIG_STR "/.splinter"
 #define DAEMON "/splinter.daemon"
+
 const char* partOne[] = {"Magical", "Mysterious", "Commanding", "Super",
                           "Voracious", "Confused", "Bubbly", "Fierce", "Cuddly",
                           "Loyal"};

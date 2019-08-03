@@ -51,7 +51,7 @@ main(int argc, char *argv[])
   {
     // Start existing splinter
     printf("Start\n");
-    startSplinter(path);
+    //startSplinter(path);
   }
   else if(startFlag == O_CONNECT)
   {
