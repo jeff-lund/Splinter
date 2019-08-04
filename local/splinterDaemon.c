@@ -20,8 +20,14 @@
 #include <wordexp.h>
 
 #define LOCKFILE "~/.splinter/splintered.pid"
+#define LOGFILE "~/.splinter/splinter.log"
+#define SOCKFILE "/tmp/splinter.sock"
+
 #define LOCKMODE S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 #define DAE_EXISTS -2
+#define MAX_CONN 20
+
+#define offsetof(TYPE, MEMBER) ((int)&((TYPE *)0)->MEMBER)
 
 int
 lockfile(int fd)
@@ -126,12 +132,12 @@ makeSplinterDaemon(int * fdlock, struct sigaction *sa)
 
   // close all file descriptors
   for(int i = 0; i < rl.rlim_max; ++i) {
-    // keep fd of lock open to hold it
+    // keep fd of lock open to hold onto it
     if(i == *fdlock)
       continue;
     close(i);
   }
-
+  fdlock |=
   fd0 = open("/dev/null", O_RDWR);
   fd1 = dup(0);
   fd2 = dup(0);
@@ -143,16 +149,65 @@ makeSplinterDaemon(int * fdlock, struct sigaction *sa)
   return 0;
 }
 
+void
+daemon_listen(void * vfdsock)
+{
+  int fdsock = (int *)vfdsock;
+  int connfd;
+  struct sockaddr_un cli_un;
+  socklen_t len;
+
+  if(listen(fdsock, MAX_CONN) < 0)
+    error(EXIT_FAILURE, 0, "listen failure");
+  while(1)
+  {
+    if((connfd = accept(fdsock, (struct sockaddr_un *)&cli_un, &len) < 0)
+    {
+      error("EXIT_FAILURE", 0, "accept failure");
+    }
+    len -= strlen(SOCKFILE);
+    write(connfd, )
+  }
+}
+
 int
 splinterDaemon()
 {
-  int fdlock;
+  int fdlock, fdlog, fdsock;
+  int size;
   struct sigaction sa;
+  struct sockaddr_un sun;
+  wordexp_t expanded;
+  pthread_t listener;
+
   if(makeSplinterDaemon(&fdlock, &sa)) {
     printf("daemon creation failed");
     return -1;
   }
-  sleep(10);
+  // open log
+  if(wordexp(LOGFILE, &expanded, 0) != 0)
+    error(EXIT_FAILURE, errno, "word expansion failed");
+  if((logfd = open(expanded[0], O_RDWR | O_CREAT | O_APPEND, LOCKMODE)) < 0)
+    error(EXIT_FAILURE, 0, "cannot open daemon log");
+  if(lockfile(logfd) < 0)
+    error(EXIT_FAILURE, 0, "cannot obtain log lock");
+  wordfree(&expanded);
+  // create UNIX socket at /tmp
+  //unlink(SOCKFILE);
+  sun.sa_family = AF_UNIX;
+  strcpy(sun.sun_path, SOCKFILE);
+  if((fdsock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+  {
+    error(EXIT_FAILURE, errno, "socket failed");
+  }
+  size = offsetof(struct sockaddr_un, sun_path) + strlen(sun.sun_path);
+  if(bind(fd, (struct sockaddr *)&sun, size) < 0)
+  {
+    error(EXIT_FAILURE, errno, "bind failed");
+  }
+  // create thread to listen
+  pthread_create(&listener, NULL, &daemon_listen, &fdsock);
+
   return 0;
 }
 
