@@ -1,8 +1,5 @@
 main: main.c
-	gcc -g -Wall main.c initialize.c start.c
-
-daemon: splinterDaemon.c
-	gcc -o splintered -Wall splinterDaemon.c
+	gcc -g -o splinter -Wall main.c initialize.c start.c connect.c splinterDaemon.c
 
 clean:
-	rm -rf .splinter/ a.out splintered
+	rm -rf .splinter/ splinter

@@ -5,29 +5,9 @@
   Connect users to running splinter
   Close a running splinter
 */
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <error.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/resource.h>
-#include <signal.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <wordexp.h>
+#include "splinterDaemon.h"
 
-#define LOCKFILE "~/.splinter/splintered.pid"
-#define LOGFILE "~/.splinter/splinter.log"
-#define SOCKFILE "/tmp/splinter.sock"
-
-#define LOCKMODE S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
-#define DAE_EXISTS -2
-#define MAX_CONN 20
-
-#define offsetof(TYPE, MEMBER) ((int)&((TYPE *)0)->MEMBER)
+#define offsetof(TYPE, MEMBER) ((long)&((TYPE *)0)->MEMBER)
 
 int
 lockfile(int fd)
@@ -137,7 +117,7 @@ makeSplinterDaemon(int * fdlock, struct sigaction *sa)
       continue;
     close(i);
   }
-  fdlock |=
+
   fd0 = open("/dev/null", O_RDWR);
   fd1 = dup(0);
   fd2 = dup(0);
@@ -149,36 +129,17 @@ makeSplinterDaemon(int * fdlock, struct sigaction *sa)
   return 0;
 }
 
-void
-daemon_listen(void * vfdsock)
-{
-  int fdsock = (int *)vfdsock;
-  int connfd;
-  struct sockaddr_un cli_un;
-  socklen_t len;
-
-  if(listen(fdsock, MAX_CONN) < 0)
-    error(EXIT_FAILURE, 0, "listen failure");
-  while(1)
-  {
-    if((connfd = accept(fdsock, (struct sockaddr_un *)&cli_un, &len) < 0)
-    {
-      error("EXIT_FAILURE", 0, "accept failure");
-    }
-    len -= strlen(SOCKFILE);
-    write(connfd, )
-  }
-}
-
 int
 splinterDaemon()
 {
-  int fdlock, fdlog, fdsock;
+  int fdlock, fdlog, fdsock, connfd;
+  struct sockaddr_un cli_un;
   int size;
   struct sigaction sa;
   struct sockaddr_un sun;
   wordexp_t expanded;
-  pthread_t listener;
+  char *msg = "waiting on connect\n";
+  char *msg2 = "connection recieved\n";
 
   if(makeSplinterDaemon(&fdlock, &sa)) {
     printf("daemon creation failed");
@@ -187,32 +148,43 @@ splinterDaemon()
   // open log
   if(wordexp(LOGFILE, &expanded, 0) != 0)
     error(EXIT_FAILURE, errno, "word expansion failed");
-  if((logfd = open(expanded[0], O_RDWR | O_CREAT | O_APPEND, LOCKMODE)) < 0)
+  if((fdlog = open(expanded.we_wordv[0], O_RDWR | O_CREAT | O_APPEND, LOCKMODE)) < 0)
     error(EXIT_FAILURE, 0, "cannot open daemon log");
-  if(lockfile(logfd) < 0)
+  if(lockfile(fdlog) < 0)
     error(EXIT_FAILURE, 0, "cannot obtain log lock");
   wordfree(&expanded);
-  // create UNIX socket at /tmp
-  //unlink(SOCKFILE);
-  sun.sa_family = AF_UNIX;
+  // create UNIX socket at /tmp/
+  unlink(SOCKFILE);
+  sun.sun_family = AF_UNIX;
   strcpy(sun.sun_path, SOCKFILE);
-  if((fdsock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
-  {
+  if((fdsock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
     error(EXIT_FAILURE, errno, "socket failed");
   }
   size = offsetof(struct sockaddr_un, sun_path) + strlen(sun.sun_path);
-  if(bind(fd, (struct sockaddr *)&sun, size) < 0)
-  {
+  if(bind(fdsock, (struct sockaddr *)&sun, size) < 0) {
     error(EXIT_FAILURE, errno, "bind failed");
   }
-  // create thread to listen
-  pthread_create(&listener, NULL, &daemon_listen, &fdsock);
 
-  return 0;
-}
+  socklen_t len;
 
-int main(void)
-{
-  splinterDaemon();
+  if(listen(fdsock, MAX_CONN) < 0)
+    error(EXIT_FAILURE, 0, "listen failure");
+
+  while(1)
+  {
+    write(fdlog, msg, strlen(msg));
+    if((connfd = accept(fdsock, (struct sockaddr_un *)&cli_un, &len)) < 0)
+    {
+      write(fdlog, "daemon encountered accept error\n", strlen("daemon encountered accept error\n"));
+      continue;
+    }
+    // TODO log connection with pid of client
+    write(fdlog, msg2, strlen(msg2));
+    // create thread to initiate command
+    write(connfd, "connection made", strlen("connection made"));
+    sleep(1);
+    close(connfd);
+  }
+  write(fdlog, "goodbye\n", 8);
   return 0;
 }

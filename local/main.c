@@ -15,9 +15,12 @@
 #include <error.h>
 #include <errno.h>
 #include <getopt.h>
+#include <sys/wait.h>
 
 #include "initialize.h"
 #include "start.h"
+#include "connect.h"
+#include "splinterDaemon.h"
 
 #define ARGSTRING "c:i:s:"
 #define O_INIT 0x1
@@ -37,12 +40,22 @@ main(int argc, char *argv[])
 {
   char *path = NULL;
   char startFlag = 0x0;
+  int pid;
   // check options connect/init/start
   path = parseOpts(&startFlag, argc, argv);
+  // start daemon
+  pid = fork();
+  if(pid == 0) {
+    splinterDaemon();
+    exit(0);
+  }
+  else
+    waitpid(pid, NULL, 0);
 
   if(startFlag == O_INIT)
   {
     // Initialize new splinter at path and start up
+    printf("Init\n");
     if(initialize(path) < 0)
       error(EXIT_FAILURE, 0, "initialization failed");
     startSplinter(path);
@@ -57,6 +70,7 @@ main(int argc, char *argv[])
   {
     // Connect to running splinter
     printf("Connect\n");
+    connect_splinter();
   }
   else
   {
