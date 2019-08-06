@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <getopt.h>
 #include <poll.h>
@@ -99,7 +100,7 @@ serverresponse(int server_fd)
 	server.events = POLLIN;
 	server.revents = 0;
 
-	done = 0;
+	int done = 0;
 	timeout = 5000; //Wait till server times out
 
 	buffersize = LINEMAX;

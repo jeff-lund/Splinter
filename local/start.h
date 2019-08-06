@@ -1,0 +1,1 @@
+int startSplinter(char*);

@@ -17,6 +17,10 @@
 #include "splintersh.h"
 
 #define _POSIX_SOURCE 1
+<<<<<<< HEAD
+=======
+#define MAX 1028
+>>>>>>> ae6b7a72f45666638871305c411fc2c73cb7ea03
 #define EOT 0x04
 #define MAX 4096
 sig_atomic_t term;
@@ -36,11 +40,21 @@ server_loop(int rdfd, int wrfd)
 	if(!buffer) {
 		return 0;
 	}
+<<<<<<< HEAD
 
 	while(!term) {
 		memset(buffer, 0, buffersize);
 		rc = read(rdfd, buffer, buffersize - 1);
 		if(rc == 0)
+=======
+	
+	while(1) {
+		int rc;
+		memset(buffer, 0, MAX);
+		rc = read(client_fd, buffer, MAX - 1);
+		if(rc == 0) {
+			printf("The client hungup\n");
+>>>>>>> ae6b7a72f45666638871305c411fc2c73cb7ea03
 			break;
 
 		if(rc < 0) {
@@ -48,7 +62,14 @@ server_loop(int rdfd, int wrfd)
 			break;
 		}
 
+<<<<<<< HEAD
 		Exec(buffer);
+=======
+		exec_command_remotely(buffer, rc, client_fd);
+		buffer[0] = EOT;
+		write(client_fd, buffer, 1);
+	}
+>>>>>>> ae6b7a72f45666638871305c411fc2c73cb7ea03
 
 		if(term)
 			write(wrfd, nack, sizeof nack);
