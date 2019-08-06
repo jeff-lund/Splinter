@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 		goto error;
 	}
 
-	splinter(socketfd);
+	//splinter(socketfd);
 
 
 error:
