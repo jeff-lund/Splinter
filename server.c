@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     goto out;
   }
 
-  rc = listen(sock, backlog);
+  rc = s_listen(sock, backlog);
   if (rc < 0) {
 		printf("Listen() returned when listening to sock.\n");
     goto out;

@@ -13,6 +13,14 @@
 #define _XOPEN_SOURCE 600
 
 int
+s_listen(int socketfd, int bl)
+{
+	int rc;
+	rc = listen(socketfd, bl);
+	return rc;
+}
+
+int
 s_bind(const char *host, const char *port)
 {
 	int sock = -1; //By Default Lets Fail
@@ -110,7 +118,7 @@ s_connect(const char *host, const char *port, int sockettype)
 
 	  rc = connect(sock, i->ai_addr, i->ai_addrlen); 
 	  if (rc < 0) {
-			printf("Error With Connecting\n");
+			printf("Error With Connecting, server.c line 113\n");
 		  close(sock);
 		  sock = -1;
   	} else {
@@ -128,16 +136,13 @@ int
 s_accept(int sockfd)
 {
 	int peer;
-  struct sockaddr_in peer_sa;
-  socklen_t peer_sa_size = sizeof(struct sockaddr_in);
-  peer = accept(sockfd, (struct sockaddr*)&peer_sa, &peer_sa_size);
+  struct sockaddr_in peer_socketadd;
+  socklen_t peer_socketadd_size = sizeof(struct sockaddr_in);
+  peer = accept(sockfd, (struct sockaddr*)&peer_socketadd, &peer_socketadd_size);
   if (peer < 0) {
+		printf("Accepted\n");
   }
 
 	return peer;
 }
-
-
-
-
 

@@ -60,7 +60,7 @@ setparams(struct server *server, int opt, char *arg)
 
 	switch(opt) {
 		case 'a':	server->host = arg; break;
-		case 'p': server->host = arg; break;
+		case 'p': server->port = arg; break;
 		default: break;
 	}
 
