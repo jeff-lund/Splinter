@@ -14,52 +14,50 @@
 #include <sys/socket.h>
 #include "splinter.h"
 #include "connectioninfo.h"
+#include "splintersh.h"
 
 #define _POSIX_SOURCE 1
-
 #define EOT 0x04
+#define MAX 4096
+sig_atomic_t term;
+
 
 int 
-exec_command_remotely(const char *buffer, int buffersize, int fd)
-{
-	int rc;
-	Exec(buffer);
-}
-
-int 
-server_loop(int client_fd, int log_fd)
+server_loop(int rdfd, int wrfd)
 {
 	char *buffer;
-	int buffersize;
+	int buffersize, rc;
+  char ack[] = {"aye"};
+  char nack[] = {"nay"};
 
 	buffersize = MAX;
 
 	buffer = malloc(buffersize);
 	if(!buffer) {
-		kill(getpid(), SIGUSR1);
 		return 0;
 	}
-	
-	while(1) {
-		int rc;
-		memset(buffer, 0, MAX);
-		rc = read(client_fd, buffer, MAX - 1)
-		if(rc == 0) {
-			printf("The client hungup\n");
+
+	while(!term) {
+		memset(buffer, 0, buffersize);
+		rc = read(rdfd, buffer, buffersize - 1);
+		if(rc == 0)
 			break;
-		}
 
 		if(rc < 0) {
-			printf("read returned greater then 0 in server_loop\n");
+			printf("Error on read from server_loop");
 			break;
 		}
 
-		exec_command_remotely(buf, rc, client_fd);
-		buf[0] = EOT;
-		write(client_fd, buffer, 1);
-	}
+		Exec(buffer);
 
+		if(term)
+			write(wrfd, nack, sizeof nack);
+		else
+			write(wrfd, ack, sizeof ack);
+		
+	}
 	if(buffer)
 		free(buffer);
+	kill(getppid(), SIGUSR1);
 	return 0;
 }

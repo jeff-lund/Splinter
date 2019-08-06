@@ -20,6 +20,8 @@ s_bind(const char *host, const char *port)
 	struct addrinfo pull;
 	struct addrinfo *address;
 
+	printf("%s -> %s\n", host, port);
+
 	memset(&pull, 0, sizeof pull);
   pull.ai_family = AF_INET;
   pull.ai_socktype = SOCK_STREAM;

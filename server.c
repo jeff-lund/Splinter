@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include "splinter.h"
 #include "connectioninfo.h"
+#include "serverside.h"
 
 #define _POSIX_SOURCE 1
 
@@ -39,6 +40,9 @@ int main(int argc, char* argv[])
   }
   memset(buf, 0, bufsize);
 
+	printf("%s\n", port(server));
+	printf("%s\n", host(server));
+
 	sock = s_bind(host(server), port(server));
   if (sock < 0) {
 		printf("error on bind() when binding to host and port\n");
@@ -58,7 +62,7 @@ int main(int argc, char* argv[])
     peer = s_accept(sock);
       
 		if (peer > 0) {
-			server_loop(peer, STDERR_FILENO);
+			printf("connected\n");
       close(peer);
     } 
 		else

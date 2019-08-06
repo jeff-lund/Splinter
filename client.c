@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "splinter.h"
+#include "splintersh.h"
 #include "connectioninfo.h"
 
 int main(int argc, char** argv)
@@ -21,6 +22,8 @@ int main(int argc, char** argv)
 		printf("Failed To Connect To Remote Host.\n");
 		goto error;
 	}
+
+	//splinter(socketfd);
 
 
 error:

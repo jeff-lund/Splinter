@@ -12,6 +12,8 @@
 #include <error.h>
 #include <errno.h>
 
+#include "connectioninfo.h"
+
 #define LINEMAX 4096
 #define FALSE 0
 #define TRUE 1
@@ -261,7 +263,7 @@ createPath(char *path, char *p1, char *p2)
   strcat(path, p2);
 }
 
-static void
+void
 Exec(char *buf)
 {
   char * path; // PATH environment variable

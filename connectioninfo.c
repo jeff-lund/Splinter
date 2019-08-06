@@ -1,14 +1,16 @@
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <getopt.h>
+#include <poll.h>
 #include "connectioninfo.h"
 
 #define LINEMAX 4096
 
+#define DEAFULT_HOST "10.0.0.69"
+#define DEAFULT_PORT "8080"
 
-static const char* DEFAULT_HOST = "10.0.0.69"; // means "any suitable interface"
-static const char* DEFAULT_PORT = "8080";
 
 static const char* options = "a:p:";
 
@@ -24,8 +26,8 @@ alloc_serverinfo(void)
     server = malloc(sizeof(struct server));
     if (server != 0) {
         memset(server, 0, sizeof *server);
-        server->host = DEFAULT_HOST;
-        server->port = DEFAULT_PORT;
+        server->host = DEAFULT_HOST;
+        server->port = DEAFULT_PORT;
     }
     return server;
 }
@@ -89,7 +91,7 @@ port(struct server *server)
 int
 serverresponse(int server_fd)
 {
-	int rc, timeout, buffersize, finished;
+	int rc, timeout, buffersize, finished, done;
 	char *buffer;
 	struct pollfd server;
 	
