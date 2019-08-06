@@ -92,7 +92,7 @@ port(struct server *server)
 int
 serverresponse(int server_fd)
 {
-	int rc, timeout, buffersize, finished, done;
+	int rc, timeout, buffersize, finished;
 	char *buffer;
 	struct pollfd server;
 	
