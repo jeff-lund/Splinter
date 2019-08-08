@@ -2,12 +2,20 @@
 
 ## To build
 
-make
+In order to build *Splinter*, just use type `make` and you will have a *client* and *server* made for you to use.
 
 ## To run,
 
-./server  
-* look under connectioninfo.c, you need to change the Deafult host to whatever yours is. you have to change numbers for address. look for for IPv4 Address under Ethernet adapter for it. You can leave port 8080*
+In order to run *Splinter*, you have to start up the *server* first.
 
+In order to this you will need to find your IPv4 Address under Wireless LAN adapter Wi-Fi
 
-./client -a 10.0.0.69 -p 8080 (10.0.0.69 is my host so whatever yours is )
+Example:
+
+`./server -a 127.0.0.1 -p 5731`
+
+Once the server has started up, you can connect the client to it the same way
+
+Exmaple:
+
+`./client -a 127.0.0.1 -p 5731`
