@@ -1,11 +1,3 @@
-/**************************************************
-* Jeff Lund
-* CS 510 ALSP
-* LS replacement - myls
-* Build - gcc -o myls myls.c
-* Usage: ./myls
-*        ./ myls [OPTIONS] [FILES]
-**************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +38,7 @@ globerr(const char *path, int eerrno)
 
 
 static void
-Malloc(char **buf, uint size)
+Malloc(char **buf, uint size, int fd)
 {
   *buf = malloc(size);
   if(!buf)
@@ -56,7 +48,7 @@ Malloc(char **buf, uint size)
 }
 
 static int
-Stat(char *path, struct stat *st)
+Stat(char *path, struct stat *st, int fd)
 {
   int val;
   val = stat(path, st);
@@ -71,7 +63,7 @@ Stat(char *path, struct stat *st)
 }
 
 static void
-Lstat(char *path, struct stat *st)
+Lstat(char *path, struct stat *st, int fd)
 {
   if(lstat(path, st) < 0)
   {
@@ -80,14 +72,14 @@ Lstat(char *path, struct stat *st)
 }
 
 static int
-isHidden(char *buf)
+isHidden(char *buf, int fd)
 {
   char *token;
   char *last;
   char *copy;
   int ret;
 
-  Malloc(&copy, sizeof(char) * (strlen(buf) + 1));
+  Malloc(&copy, sizeof(char) * (strlen(buf) + 1), fd);
   strcpy(copy, buf);
   token = strtok(copy, "/");
   last = token;
@@ -102,35 +94,35 @@ isHidden(char *buf)
 }
 
 static void
-classify(struct stat *st)
+classify(struct stat *st, int fd)
 {
   switch(st->st_mode & S_IFMT) {
-    case S_IFDIR:  printf("/"); break; //directory
+    case S_IFDIR:  write(fd, "/", 2); break; //directory
     case S_IFREG:  if(st->st_mode & IS_EXEC)
-                      printf("*"); // executable
+											write(fd, "*", 2);
                    break;
-    case S_IFIFO:  printf("|"); break; // FIFO == PIPE
-    case S_IFLNK:  printf("@"); break; // link
-    case S_IFSOCK: printf("="); break; // socket
+    case S_IFIFO:  write(fd, "*", 2); break; // FIFO == PIPE
+    case S_IFLNK:  write(fd, "@", 2); break; // link
+    case S_IFSOCK: write(fd, "=", 2); break; // socket
   }
 }
 
 void
-printType(struct stat *st)
+printType(struct stat *st, int fd)
 {
   switch(st->st_mode & S_IFMT) {
-    case S_IFDIR:  printf("d"); break;
-    case S_IFREG:  printf("-"); break;
-    case S_IFCHR:  printf("c"); break;
-    case S_IFBLK:  printf("b"); break;
-    case S_IFIFO:  printf("|"); break; // FIFO == PIPE
-    case S_IFLNK:  printf("l"); break; // tricky to get right
-    case S_IFSOCK: printf("s"); break;
+    case S_IFDIR:  write(fd, "d", 2); break;
+    case S_IFREG:  write(fd, "-", 2); break;
+    case S_IFCHR:  write(fd, "c", 2); break;
+    case S_IFBLK:  write(fd, "b", 2); break;
+    case S_IFIFO:  write(fd, "|", 2); break; // FIFO == PIPE
+    case S_IFLNK:  write(fd, "l", 2); break; // tricky to get right
+    case S_IFSOCK: write(fd, "s", 2); break;
   }
 }
 
 static void
-printMode(struct stat *st)
+printMode(struct stat *st, int fd)
 {
   printf((st->st_mode & S_IRUSR)? "r":"-");
   printf((st->st_mode & S_IWUSR)? "w":"-");
@@ -181,7 +173,7 @@ setFlags(int argc, char **argv)
   integer constant to avoid floating point hassles.
 */
 static void
-printDate(struct stat *st)
+printDate(struct stat *st, int fd)
 {
   int dateStrSize = 14;
   char dateStr[dateStrSize];
@@ -202,31 +194,35 @@ printDate(struct stat *st)
 
 
 static void
-printUID(uid_t uid)
+printUID(uid_t uid, int fd)
 {
   struct passwd *pw;
   if((pw = getpwuid(uid)) == NULL)
-    printf("%i ", uid);
+		write(fd, uid, sizeof(uid));
+    //printf("%i ", uid);
   else
-    printf("%s", pw->pw_name);
+		write(fd, pw->pw_name, strlen(pw->pw_name));
+    //printf("%s", pw->pw_name);
   return;
 }
 
 static void
-printGID(gid_t gid)
+printGID(gid_t gid, int fd)
 {
   struct group *gr;
   if((gr = getgrgid(gid)) == NULL)
-    printf("%i ", gid);
+		write(fd, gid, sizeof gid);
+    //printf("%i ", gid);
   else
-    printf("%s", gr->gr_name);
+		write(fd, gr->gr_name, strlen(gr->gr_name));
+    //printf("%s", gr->gr_name);
   return;
 }
 
 static void
-printFile(char *name, struct stat *st, char *symbName, struct stat *symbst)
+printFile(char *name, struct stat *st, char *symbName, struct stat *symbst, int fd)
 {
-  if(!(ARGMAP & O_ALL) && isHidden(name))
+  if(!(ARGMAP & O_ALL) && isHidden(name, fd))
   {
     return;
   }
@@ -234,56 +230,69 @@ printFile(char *name, struct stat *st, char *symbName, struct stat *symbst)
   if(ARGMAP & O_INODE)
   {
     // INODE
-    printf("%li  ", st->st_ino);
+    //printf("%li  ", st->st_ino);
+		write(fd, st->st_ino, sizeof st->st_ino);
   }
 
   if(ARGMAP & O_LIST)
   {
     // MODE
-    printType(st);
-    printMode(st);
-    printf("  ");
+    printType(st, fd);
+    printMode(st, fd);
+		write(fd, "  ", 4);
+    //printf("  ");
     //NLINK
-    printf("%li  ", st->st_nlink);
+    //printf("%li  ", st->st_nlink);
+		write(fd, st->st_nlink, sizeof st->st_nlink);
     // OWNER
-    printUID(st->st_uid);
-    printf("  ");
+    printUID(st->st_uid, fd);
+		write(fd, "  ", 4);
+    //printf("  ");
     // GROUP
-    printGID(st->st_gid);
-    printf("  ");
+    printGID(st->st_gid, fd);
+		write(fd, "  ", 4);
+    //printf("  ");
     // SIZE
-    printf("%li  ", st->st_size);
+		write(fd, st->st_size, sizeof(st->st_size));
+    //printf("%li  ", st->st_size);
     // DATE
-    printDate(st);
-    printf("  ");
+    printDate(st, fd);
+		write(fd, "  ", 4);
+    //printf("  ");
   }
   // NAME
   if(ARGMAP & O_LIST && S_ISLNK(st->st_mode))
   {
-    printf("%s -> %s", name, symbName);
+    //printf("%s -> %s", name, symbName);
+		write(fd, name, strlen(name));
+		write(fd, " -> ", 5);
+		write(fd, name, strlen(symbName));
   }
   else
   {
-    printf("%s", name);
+		write(fd, name, strlen(name));
+    //printf("%s", name);
   }
   // CLASSIFY
   if(ARGMAP & O_CLASSIFY)
   {
     if(ARGMAP & O_LIST && S_ISLNK(st->st_mode))
-      classify(symbst);
+      classify(symbst, fd);
     else
-      classify(st);
+      classify(st, fd);
   }
-  printf("  ");
+	write(fd, "  ", 4);
+  //printf("  ");
   if(ARGMAP & (O_LIST | O_ONE))
   {
-    printf("\n");
+		write(fd, "\n", 4);
+    //printf("\n");
   }
   return;
 }
 
 static void
-listSymbLink(char *path, char* entryPath, struct stat *st)
+listSymbLink(char *path, char* entryPath, struct stat *st, int fd)
 {
   struct stat symbst; // stat of following symbolic link
   long int sz;
@@ -292,12 +301,12 @@ listSymbLink(char *path, char* entryPath, struct stat *st)
   symbst.st_mode = 0;
   sz = readlink(entryPath, buffer, PATH_MAX);
   buffer[sz] = '\0';
-  Stat(entryPath, &symbst);
-  printFile(path, st, buffer, &symbst);
+  Stat(entryPath, &symbst, fd);
+  printFile(path, st, buffer, &symbst, fd);
 }
 
 static void
-listDir(char *path, struct stat *st)
+listDir(char *path, struct stat *st, int fd)
 {
   DIR *dp;
   struct dirent *dirp;
@@ -312,17 +321,17 @@ listDir(char *path, struct stat *st)
     if(entryPath[strlen(entryPath) - 1] != '/')
       strcat(entryPath, "/");
     strcat(entryPath, dirp->d_name);
-    Lstat(entryPath, st);
+    Lstat(entryPath, st, fd);
 
     if(S_ISLNK(st->st_mode))
-      listSymbLink(dirp->d_name, entryPath, st);
+      listSymbLink(dirp->d_name, entryPath, st, fd);
     else
-      printFile(dirp->d_name, st, NULL, NULL);
+      printFile(dirp->d_name, st, NULL, NULL, fd);
   }
 }
 
 static void
-list(glob_t paths)
+list(glob_t paths, int fd)
 {
   struct stat st;
   char *path;
@@ -332,13 +341,13 @@ list(glob_t paths)
   {
     memset(buf, 0, PATH_MAX);
     path = paths.gl_pathv[i];
-    Lstat(path, &st);
+    Lstat(path, &st, fd);
     if(S_ISDIR(st.st_mode))
-      listDir(path, &st);
+      listDir(path, &st, fd);
     else if(S_ISLNK(st.st_mode))
-      listSymbLink(path, path, &st);
+      listSymbLink(path, path, &st, fd);
     else
-      printFile(path, &st, NULL, NULL);
+      printFile(path, &st, NULL, NULL, fd);
   }
   if(!(ARGMAP & (O_LIST | O_ONE)))
     printf("\n");
@@ -347,7 +356,7 @@ list(glob_t paths)
 }
 
 int
-main(int argc, char *argv[])
+ls(int argc, char *argv[], int fd)
 {
   glob_t paths;
   setFlags(argc, argv);
@@ -377,7 +386,7 @@ main(int argc, char *argv[])
   }
   if(paths.gl_pathc)
   {
-    list(paths);
+    list(paths, fd);
   }
   globfree(&paths);
 	return 0;

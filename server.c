@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
       
 		if (peer > 0) {
 			printf("connected\n");
+			server_loop(peer, STDERR_FILENO);
       close(peer);
     } 
 		else
