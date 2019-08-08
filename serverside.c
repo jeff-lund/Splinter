@@ -44,7 +44,7 @@ argvlloc(char *buffer, int buffersize)
 {
   int count, i = 0;
 
-  for (i; i<buffersize; ++i) {
+  for(; i<buffersize; ++i) {
  		if (buffer[i] == '\0')
       ++count;
   }
@@ -83,7 +83,7 @@ builtin(int argc, char *argv[], int fd)
 int
 r_exec(char *buffer, int buffersize, int fd)
 {
-	int rc, bufnum, argc, argvn;
+	int rc, argc, argvn;
 	char **argv;
 
 	argvn = argvlloc(buffer, buffersize);
@@ -92,7 +92,7 @@ r_exec(char *buffer, int buffersize, int fd)
 	if(!argv)
 		return -1;
 
-	memset(argv, 0, sizeof argv);
+	memset(argv, 0, sizeof(*argv));
 	argc = argclloc(argv, buffer, buffersize, argvn);
 
 	if(argc != argvn) {
@@ -124,9 +124,10 @@ server_loop(int client_fd, int log_fd)
 	while(1) {
 		memset(buffer, 0, buffersize);
 		rc = read(client_fd, buffer, buffersize - 1);
-		if(rc == 0)
+		if(rc == 0) {
 			printf("The client hungup\n");
 			break;
+		}
 
 		if(rc < 0) {
 			printf("Error on read from server_loop");

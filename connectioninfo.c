@@ -92,7 +92,10 @@ port(struct server *server)
 int
 serverresponse(int server_fd)
 {
-	int rc, timeout, buffersize, finished;
+	int rc = 0;
+	int finished;
+	int buffersize = LINEMAX;
+	int timeout = 5000;
 	char *buffer;
 	struct pollfd server;
 	
@@ -100,10 +103,6 @@ serverresponse(int server_fd)
 	server.events = POLLIN;
 	server.revents = 0;
 
-	int done = 0;
-	timeout = 5000; //Wait till server times out
-
-	buffersize = LINEMAX;
 	buffer = malloc(buffersize);
 
 	if(!buffer)
@@ -116,12 +115,12 @@ serverresponse(int server_fd)
 
 		if(poll_server == 0) {
 			printf("Error serverresponse(), poll returned 0, timed out");
-			done = 1;
+			finished = 1;
 		}
 		
 		if(poll_server < 0) {
 			printf("Error serverresponse(), poll returned greter then 1");
-			done = 1;
+			finished = 1;
 		}
 
 		else {
@@ -130,12 +129,12 @@ serverresponse(int server_fd)
 			server_r = read(server_fd, buffer, buffersize - 1);
 			if(server_r > 0) {
 				fprintf(stdout, "%s", buffer);
-				done = 1;
+				finished = 1;
 			}
 			
 			else {
 				printf("Issue with read in serverresponse()");
-				done = 1;
+				finished = 1;
 			}	
 		}
 	}
