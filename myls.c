@@ -198,7 +198,7 @@ printUID(uid_t uid, int fd)
 {
   struct passwd *pw;
   if((pw = getpwuid(uid)) == NULL)
-		write(fd, uid, sizeof(uid));
+		write(fd, &(uid), sizeof(uid));
     //printf("%i ", uid);
   else
 		write(fd, pw->pw_name, strlen(pw->pw_name));
@@ -211,7 +211,7 @@ printGID(gid_t gid, int fd)
 {
   struct group *gr;
   if((gr = getgrgid(gid)) == NULL)
-		write(fd, gid, sizeof gid);
+		write(fd, &(gid), sizeof gid);
     //printf("%i ", gid);
   else
 		write(fd, gr->gr_name, strlen(gr->gr_name));
@@ -231,7 +231,7 @@ printFile(char *name, struct stat *st, char *symbName, struct stat *symbst, int 
   {
     // INODE
     //printf("%li  ", st->st_ino);
-		write(fd, st->st_ino, sizeof st->st_ino);
+		write(fd, &(st->st_ino), sizeof st->st_ino);
   }
 
   if(ARGMAP & O_LIST)
@@ -243,7 +243,7 @@ printFile(char *name, struct stat *st, char *symbName, struct stat *symbst, int 
     //printf("  ");
     //NLINK
     //printf("%li  ", st->st_nlink);
-		write(fd, st->st_nlink, sizeof st->st_nlink);
+		write(fd, &(st->st_nlink), sizeof st->st_nlink);
     // OWNER
     printUID(st->st_uid, fd);
 		write(fd, "  ", 4);
@@ -253,7 +253,7 @@ printFile(char *name, struct stat *st, char *symbName, struct stat *symbst, int 
 		write(fd, "  ", 4);
     //printf("  ");
     // SIZE
-		write(fd, st->st_size, sizeof(st->st_size));
+		write(fd, &(st->st_size), sizeof(st->st_size));
     //printf("%li  ", st->st_size);
     // DATE
     printDate(st, fd);

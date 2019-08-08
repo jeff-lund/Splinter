@@ -18,12 +18,15 @@ int main(int argc, char** argv)
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
 
-	socketfd = s_connect(host(server), port(server), SOCK_STREAM);
-
-	printf("%s\n", port(server));
 	printf("%s\n", host(server));
 
+	printf("%s\n", port(server));
 
+
+
+	socketfd = s_connect(host(server), port(server), SOCK_STREAM);
+
+	
 
 	if(socketfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
