@@ -37,26 +37,26 @@ s_bind(const char *host, const char *port)
 
 	if(!host || !port) {
 		printf("Please supply a Host or Port");
-		goto error;
+		return -1;
 	}
 
 	rc = getaddrinfo(host, port, &pull, &address);
 
 	if(rc != 0) {
 		printf("Error On getaddrinfo();");
-		goto error;
+		return -1;
 	}
 
 	struct addrinfo *i;
-	
+
 	for(i = address; i != NULL; ++i) {
-		
+
   	sock = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 
-	  if (sock < 0) 
+	  if (sock < 0)
 			continue;
 
-	  rc = bind(sock, i->ai_addr, i->ai_addrlen); 
+	  rc = bind(sock, i->ai_addr, i->ai_addrlen);
 
 	  if (rc < 0) {
 			fprintf(stderr, "(%s:%d) %s(), connect returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
@@ -81,7 +81,6 @@ s_bind(const char *host, const char *port)
 
 	freeaddrinfo(address);
 
-error:
 	return sock;
 }
 
@@ -99,24 +98,24 @@ s_connect(const char *host, const char *port, int sockettype)
 
 	if(!host || !port) {
 		printf("Please supply a Host or Port");
-		goto error;
+		return -1;
 	}
 
 	rc = getaddrinfo(host, port, &pull, &address);
 
 	if(rc != 0) {
 		printf("Error On getaddrinfo();");
-		goto error;
+		return -1;
 	}
 
 	struct addrinfo *i;
 	for(i = address; i != NULL; ++i) {
   	sock = socket(i->ai_family, i->ai_socktype, i->ai_protocol);
 
-	  if (sock < 0) 
+	  if (sock < 0)
 			continue;
 
-	  rc = connect(sock, i->ai_addr, i->ai_addrlen); 
+	  rc = connect(sock, i->ai_addr, i->ai_addrlen);
 	  if (rc < 0) {
 			printf("Error With Connecting, server.c line 113\n");
 		  close(sock);
@@ -128,7 +127,6 @@ s_connect(const char *host, const char *port, int sockettype)
 
 	freeaddrinfo(address);
 
-error:
 	return sock;
 }
 
@@ -145,4 +143,3 @@ s_accept(int sockfd)
 
 	return peer;
 }
-

@@ -54,7 +54,7 @@ argvlloc(char *buffer, int buffersize)
 int
 builtin(int argc, char *argv[], int fd)
 {
-	int rc, length = 0;
+	int rc = 1, length = 0;
 	char *buffer;
 	int buffersize = 512;
 
@@ -62,21 +62,21 @@ builtin(int argc, char *argv[], int fd)
 
 	if(!buffer)
 		return -1;
-	
-	memset(buffer, 0, buffersize);
 
+	memset(buffer, 0, buffersize);
+  /*
 	if(strncmp(argv[0], "ls", 2)) {
 		ls(argc, argv, fd);
 	} else {
 		rc = 1;
 	}
-
+  */
 	if(length > 0)
 		write(fd, buffer, length);
 
 	if(buffer)
 		free(buffer);
-	
+
 	return rc;
 }
 
@@ -101,14 +101,14 @@ r_exec(char *buffer, int buffersize, int fd)
 	}
 
 	rc = builtin(argc, argv, fd);
-	
+
 	if(argv)
 		free(argv);
 
 	return rc;
 }
 
-int 
+int
 server_loop(int client_fd, int log_fd)
 {
 	char *buffer;
@@ -138,7 +138,7 @@ server_loop(int client_fd, int log_fd)
 		buffer[0] = EOT;
 		write(client_fd, buffer, 1);
 	}
-		
+
 	if(buffer)
 		free(buffer);
 

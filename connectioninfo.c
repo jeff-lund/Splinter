@@ -37,8 +37,8 @@ int
 getconnectioninfo(struct server *server, int argc, char *argv[])
 {
 	int optc;
-	
-	if(!server)	
+
+	if(!server)
 		goto error;
 
 	while(-1 != (optc = getopt(argc, argv, options))) {
@@ -93,12 +93,12 @@ int
 serverresponse(int server_fd)
 {
 	int rc = 0;
-	int finished;
+	int finished = 0;
 	int buffersize = LINEMAX;
 	int timeout = 5000;
 	char *buffer;
 	struct pollfd server;
-	
+
 	server.fd = server_fd;
 	server.events = POLLIN;
 	server.revents = 0;
@@ -107,7 +107,7 @@ serverresponse(int server_fd)
 
 	if(!buffer)
 		return -1;
-	
+
 	while(!finished) {
 		int poll_server;
 
@@ -117,9 +117,9 @@ serverresponse(int server_fd)
 			printf("Error serverresponse(), poll returned 0, timed out");
 			finished = 1;
 		}
-		
+
 		if(poll_server < 0) {
-			printf("Error serverresponse(), poll returned greter then 1");
+			printf("Error serverresponse(), poll returned greater then 1");
 			finished = 1;
 		}
 
@@ -131,16 +131,15 @@ serverresponse(int server_fd)
 				fprintf(stdout, "%s", buffer);
 				finished = 1;
 			}
-			
+
 			else {
 				printf("Issue with read in serverresponse()");
 				finished = 1;
-			}	
+			}
 		}
 	}
 
-	if(buffer)
-		free(buffer);
+	free(buffer);
 
 	return rc;
 }

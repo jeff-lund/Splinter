@@ -19,30 +19,22 @@ int main(int argc, char** argv)
 	getconnectioninfo(server, argc, argv);
 
 	printf("%s\n", host(server));
-
 	printf("%s\n", port(server));
 
-
-
 	socketfd = s_connect(host(server), port(server), SOCK_STREAM);
-
-	
 
 	if(socketfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
 		goto error;
 	}
-
 	splinter(socketfd);
-
 
 error:
 	if(socketfd > 0)
 		close(socketfd);
 
 	if(server != 0)
-		free(server);	
+		free(server);
 
 	return 0;
 }
-
