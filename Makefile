@@ -1,6 +1,9 @@
 CC=gcc
 CFLAGS=-g -Wall
 
+main: driver.c server.c  splintersh.c serverside.c splinter.c connectioninfo.c 
+	$(CC) $(CFLAGS) -o splinter driver.c server.c  splintersh.c serverside.c splinter.c connectioninfo.c client.c
+
 all: server client
 
 server: server.o splintersh.o serverside.o splinter.o connectioninfo.o

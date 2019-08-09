@@ -16,7 +16,7 @@ sig_atomic_t term;
 
 void sig_hand(int i) { term = 1; }
 
-int main(int argc, char* argv[])
+int server_start(int argc, char* argv[])
 {
   int sock;
   int rc;
@@ -60,28 +60,27 @@ int main(int argc, char* argv[])
   while (!term) {
     int peer;
     peer = s_accept(sock);
-      
+
 		if (peer > 0) {
 			printf("connected\n");
 			server_loop(peer, STDERR_FILENO);
       close(peer);
-    } 
+    }
 		else
-      break;   
-    } 
+      break;
+    }
 
     fprintf(stderr, "good-bye.\n");
 
 out:
-  if(sock > 0) 
+  if(sock > 0)
     close(sock);
-    
+
   if(buf)
-    free(buf); 
+    free(buf);
 
 	if(server != 0)
 		free(server);
 
   return 0;
 }
-

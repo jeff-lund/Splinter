@@ -169,7 +169,7 @@ countPipes(char *buf) {
 // Extract individual commands from a pipeline
 // cat| foo | bar will return an array of strings
 // "cat", "foo", "bar", NULL
-// return array is null terminated 
+// return array is null terminated
 char**
 pipeify(char *buf)
 {
@@ -192,7 +192,7 @@ pipeify(char *buf)
       trim(p);
       ++p;
       token = strtok(NULL, "|");
-    } 
+    }
     return pipedCmds;
 }
 
@@ -281,7 +281,7 @@ Exec(char *buf)
     strMalloc(&path, sizeof(char) * (strlen(getenv("PATH")) + 1));
     strcpy(path, getenv("PATH"));
     tok = strtok(path, delim);
-    
+
     while(tok != NULL) {
       // total size = size of buffer command + '/' +  size of path token + '\0'
       strMalloc(&cmd, sizeof(char) * (length + strlen(tok) + 2));
@@ -322,6 +322,18 @@ Pipe(int *fds)
       Error(EXIT_FAILURE, errno, "pipe failed");
 }
 
+void
+Chdir(char *path)
+{
+    trim(&path);
+    if(chdir(path) < 0)
+    {
+      perror(strerror(errno));
+    }
+}
+
+void
+globify(){ ;}
 void
 pipeExec(char ** cmds, int npipes)
 {
@@ -389,6 +401,7 @@ splinter(int server_fd)
   int n;
   int count;
   char prompt[] = "$ ";
+  char *argptr;
 
   do {
     write(STDOUT_FILENO, prompt, strlen(prompt));
@@ -423,7 +436,22 @@ splinter(int server_fd)
     {
         dobuiltin("_exit");
     }
-
+    else if(strncmp(buf, "cd", 2) == 0)
+    {
+      argptr = buf + 2;
+      if(*argptr == '\0')
+      {
+        Chdir("/");
+        continue;
+      }
+      else if(*argptr == ' ')
+      {
+        ++argptr;
+        Chdir(argptr);
+        continue;
+      }
+    }
+    // Run other commands
     pid = Fork();
     if (pid == 0) {  // child
       Exec(buf);
@@ -441,8 +469,6 @@ splinter(int server_fd)
         Error(EXIT_FAILURE, errno, "waitpid error");
     }
 
-		//write(server_fd, buf, MAX);
-		//serverresponse(server_fd);	
   } while(1);
   exit(EXIT_SUCCESS);
 }

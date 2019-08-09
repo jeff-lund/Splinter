@@ -10,7 +10,7 @@
 #include "splintersh.h"
 #include "connectioninfo.h"
 
-int main(int argc, char** argv)
+int connect_server(int argc, char** argv)
 {
 	struct server *server = 0;
 	int socketfd = -1;

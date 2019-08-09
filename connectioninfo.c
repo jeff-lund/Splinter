@@ -9,8 +9,8 @@
 
 #define LINEMAX 4096
 
-#define DEAFULT_HOST "10.0.0.69"
-#define DEAFULT_PORT "8080"
+#define DEAFULT_HOST "192.168.0.4"
+#define DEAFULT_PORT "9000"
 
 
 static const char* options = "a:p:";
@@ -41,7 +41,7 @@ getconnectioninfo(struct server *server, int argc, char *argv[])
 	if(!server)
 		goto error;
 
-	while(-1 != (optc = getopt(argc, argv, options))) {
+	while((optc = getopt(argc, argv, options)) != -1) {
 		if('?' == optc) {
 			optc = optopt;
 		}
