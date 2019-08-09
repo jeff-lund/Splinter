@@ -10,28 +10,46 @@
 #include "splintersh.h"
 #include "connectioninfo.h"
 
+#define LINEMAX 4096
+
 int connect_server(int argc, char** argv)
 {
 	struct server *server = 0;
-	int socketfd = -1;
-
+	int sockfd = -1;
+	int n;
+	char buffer[LINEMAX];
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
 
 	printf("%s\n", host(server));
 	printf("%s\n", port(server));
 
-	socketfd = s_connect(host(server), port(server), SOCK_STREAM);
+	sockfd = s_connect(host(server), port(server), SOCK_STREAM);
 
-	if(socketfd < 0) {
+	if(sockfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
 		goto error;
 	}
-	splinter(socketfd);
+	
+	while(1)
+	{
+		// print prompt
+		n = read(sockfd, buffer, LINEMAX);
+		write(STDOUT_FILENO, buffer, n);
+		memset(buffer, 0, LINEMAX);
+		// get input from user
+		n = read(STDIN_FILENO, buffer, LINEMAX);
+		write(sockfd, buffer, LINEMAX);
+		memset(buffer, 0, LINEMAX);
+		//write out response from server
+		n = read(sockfd, buffer, LINEMAX);
+		write(STDOUT_FILENO, buffer, LINEMAX);
+	}
+
 
 error:
-	if(socketfd > 0)
-		close(socketfd);
+	if(sockfd > 0)
+		close(sockfd);
 
 	if(server != 0)
 		free(server);

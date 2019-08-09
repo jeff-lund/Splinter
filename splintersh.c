@@ -334,6 +334,7 @@ Chdir(char *path)
 
 void
 globify(){ ;}
+
 void
 pipeExec(char ** cmds, int npipes)
 {
@@ -390,7 +391,7 @@ pipeExec(char ** cmds, int npipes)
 }
 
 int
-splinter(int server_fd)
+splinter(int sockfd)
 {
   long MAX = sysconf(_SC_LINE_MAX);
   char buf[MAX];
@@ -403,11 +404,18 @@ splinter(int server_fd)
   char prompt[] = "$ ";
   char *argptr;
 
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(STDERR_FILENO);
+  dup(sockfd);
+  dup(sockfd);
+  dup(sockfd);
+
   do {
-    write(STDOUT_FILENO, prompt, strlen(prompt));
+    write(sockfd, prompt, strlen(prompt));
     fflush(NULL);
     memset(buf, 0, MAX);
-    if((n = read(STDIN_FILENO, buf, MAX)) == 0) {
+    if((n = read(sockfd, buf, MAX)) == 0) {
       printf("use exit to exit shell\n");
       continue;
     }

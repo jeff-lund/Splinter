@@ -6,9 +6,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <pthread.h>
+
 #include "splinter.h"
 #include "connectioninfo.h"
 #include "serverside.h"
+#include "splintersh.h"
+#include "server.h"
 
 #define _POSIX_SOURCE 1
 
@@ -24,6 +28,7 @@ int server_start(int argc, char* argv[])
   int bufsize = 4096;
   struct server *server = 0;
   int backlog = 10;
+  pthread_t tid;
 
   signal(SIGINT, sig_hand);
   signal(SIGTERM, sig_hand);
@@ -63,8 +68,8 @@ int server_start(int argc, char* argv[])
 
 		if (peer > 0) {
 			printf("connected\n");
-			server_loop(peer, STDERR_FILENO);
-      close(peer);
+      pthread_create(&tid, NULL, thrd_fnc, (void *)&peer);
+      sleep(1);
     }
 		else
       break;
@@ -83,4 +88,12 @@ out:
 		free(server);
 
   return 0;
+}
+
+void*
+thrd_fnc(void * arg)
+{
+  int sockfd = *(int *)arg;
+  splinter(sockfd);
+  pthread_exit(NULL);
 }
