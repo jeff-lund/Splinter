@@ -29,7 +29,6 @@ int server_start(int argc, char* argv[])
   int bufsize = 4096;
   struct server *server = 0;
   int backlog = 10;
-  pthread_t tid;
   pid_t pid;
 
   signal(SIGINT, sig_hand);
@@ -79,14 +78,14 @@ int server_start(int argc, char* argv[])
         splinter(peer);
         exit(0);
       }
-      //pthread_create(&tid, NULL, thrd_fnc, (void *)&peer);
-      //sleep(1);
     }
 		else
+    {
       break;
     }
+  }
 
-    fprintf(stderr, "good-bye.\n");
+  fprintf(stderr, "good-bye.\n");
 
 out:
   if(sock > 0)
