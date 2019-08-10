@@ -8,7 +8,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <pthread.h>
-
+#include <setjmp.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include "splinter.h"
 #include "connectioninfo.h"
 #include "serverside.h"
@@ -18,8 +22,13 @@
 #define _POSIX_SOURCE 1
 
 sig_atomic_t term;
+sigjmp_buf jump;
 
-void sig_hand(int i) { term = 1; }
+void sig_hand(int i)
+{
+  term = 1;
+  siglongjmp(jump, 0);
+}
 
 int server_start(int argc, char* argv[])
 {
@@ -30,7 +39,7 @@ int server_start(int argc, char* argv[])
   struct server *server = 0;
   int backlog = 10;
   pid_t pid;
-
+  pthread_t tid;
   signal(SIGINT, sig_hand);
   signal(SIGTERM, sig_hand);
   signal(SIGUSR1, sig_hand);
@@ -62,11 +71,12 @@ int server_start(int argc, char* argv[])
   }
 
   fprintf(stderr, "pid: %d\n", getpid());
-
+  sigsetjmp(jump, 0);
   while (!term) {
     int peer;
+    int on = 1;
     peer = s_accept(sock);
-
+    setsockopt(peer, IPPROTO_TCP, TCP_NODELAY, (void *)&on, sizeof(int));
 		if (peer > 0) {
 			printf("connected\n");
       if((pid = fork()) < 0)
@@ -75,8 +85,16 @@ int server_start(int argc, char* argv[])
       }
       else if(pid == 0)
       {
+        //server_loop(peer, STDERR_FILENO);
         splinter(peer);
+        close(peer);
         exit(0);
+      }
+      else
+      {
+        pthread_create(&tid, NULL, &thrd_fnc, (void *)&pid);
+        sleep(1);
+        close(peer);
       }
     }
 		else
@@ -103,7 +121,8 @@ out:
 void*
 thrd_fnc(void * arg)
 {
-  int sockfd = *(int *)arg;
-  splinter(sockfd);
+  int pid = *(int *)arg;
+  waitpid(pid, NULL, 0);
+  printf("Thread closed, %d\n", pid);
   pthread_exit(NULL);
 }

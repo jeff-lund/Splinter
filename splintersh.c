@@ -413,7 +413,6 @@ splinter(int sockfd)
 
   do {
     write(sockfd, prompt, strlen(prompt));
-    fflush(NULL);
     memset(buf, 0, MAX);
     if((n = read(sockfd, buf, MAX)) == 0) {
       printf("use exit to exit shell\n");
@@ -442,7 +441,7 @@ splinter(int sockfd)
 
     if(strcmp(buf, "exit") == 0)
     {
-        dobuiltin("_exit");
+        break;
     }
     else if(strncmp(buf, "cd", 2) == 0)
     {
@@ -478,5 +477,6 @@ splinter(int sockfd)
     }
 
   } while(1);
-  exit(EXIT_SUCCESS);
+  close(sockfd);
+  return 0;
 }

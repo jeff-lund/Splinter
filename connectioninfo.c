@@ -12,7 +12,6 @@
 #define DEAFULT_HOST "192.168.0.4"
 #define DEAFULT_PORT "9000"
 
-
 static const char* options = "a:p:";
 
 struct server {

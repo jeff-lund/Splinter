@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,10 +15,11 @@
 
 #define LINEMAX 4096
 
+
 int connect_server(int argc, char** argv)
 {
 	struct server *server = 0;
-	struct pollfd pl[2];
+	struct pollfd pl[1];
 	int sockfd = -1;
 	int n;
 	char buffer[LINEMAX];
@@ -31,10 +33,7 @@ int connect_server(int argc, char** argv)
 	sockfd = s_connect(host(server), port(server), SOCK_STREAM);
 	// 0 - reader
 	pl[0].fd = sockfd;
-	pl[0].events = POLLIN;
-	// 1 - writer
-	pl[1].fd = sockfd;
-	pl[1].events = POLLOUT;
+	pl[0].events = POLLIN | POLLOUT;
 
 	if(sockfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
@@ -43,20 +42,25 @@ int connect_server(int argc, char** argv)
 
 	while(1)
 	{
-		poll(pl, 2, -1);
-		if(pl[0].revents & POLLIN) {
-			n = read(sockfd, buffer, LINEMAX);
-			write(STDOUT_FILENO, buffer, n);
-			memset(buffer, 0, LINEMAX);
+		if(poll(pl, 1, 100) < 0)
+		{
+			break;
 		}
-		if(pl[1].revents & POLLOUT)
+
+		if(pl[0].revents & POLLOUT)
 		{
 			// get input from user
 			n = read(STDIN_FILENO, buffer, LINEMAX);
 			write(sockfd, buffer, LINEMAX);
 			memset(buffer, 0, LINEMAX);
 		}
-
+		if(pl[0].revents & POLLIN) {
+			while((n = recv(sockfd, buffer, LINEMAX, MSG_DONTWAIT)) > 0)
+			{
+				write(STDOUT_FILENO, buffer, n);
+			}
+			memset(buffer, 0, LINEMAX);
+		}
 	}
 
 
