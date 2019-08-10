@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <error.h>
 #include <errno.h>
 #include <signal.h>
 #include <unistd.h>
@@ -29,6 +30,7 @@ int server_start(int argc, char* argv[])
   struct server *server = 0;
   int backlog = 10;
   pthread_t tid;
+  pid_t pid;
 
   signal(SIGINT, sig_hand);
   signal(SIGTERM, sig_hand);
@@ -68,8 +70,17 @@ int server_start(int argc, char* argv[])
 
 		if (peer > 0) {
 			printf("connected\n");
-      pthread_create(&tid, NULL, thrd_fnc, (void *)&peer);
-      sleep(1);
+      if((pid = fork()) < 0)
+      {
+        error(EXIT_FAILURE, errno, "fork failed");
+      }
+      else if(pid == 0)
+      {
+        splinter(peer);
+        exit(0);
+      }
+      //pthread_create(&tid, NULL, thrd_fnc, (void *)&peer);
+      //sleep(1);
     }
 		else
       break;
