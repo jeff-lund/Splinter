@@ -7,8 +7,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "splinter.h"
-#include "splintersh.h"
-#include "connectioninfo.h"
 
 int main(int argc, char** argv)
 {

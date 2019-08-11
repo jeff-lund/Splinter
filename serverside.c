@@ -9,26 +9,16 @@
 #include <sys/time.h>
 #include <error.h>
 #include <errno.h>
-
-
-#include <sys/socket.h>
 #include "splinter.h"
-#include "connectioninfo.h"
-#include "splintersh.h"
-#include "util.h"
 
-#define _POSIX_SOURCE 1
-#define EOT 0x04
-#define MAX 4096
-sig_atomic_t term;
-
-int
-argclloc(char *argv[], char *buffer, int buffersize, int count)
+int 
+setargv(char** argv, const char* buf, size_t bufsize, int count)
 {
-  int argc, i, offset = 0;
+  int argc, i = 0;
+  size_t offset = 0;
 
-  while (i < count && offset < buffersize && buffer[offset]) {
-    argv[i] = (char*)(buffer + offset);
+  while (i < count && offset < bufsize && buf[offset]) {
+    argv[i] = (char*)(buf + offset);
     offset = offset + strlen(argv[i]) + 1;
     ++i;
   }
@@ -36,111 +26,95 @@ argclloc(char *argv[], char *buffer, int buffersize, int count)
   argc = i;
 
   return argc;
-
 }
 
-int
-argvlloc(char *buffer, int buffersize)
+int 
+argccount(const char* tokbuf, size_t tokbufsize)
 {
-  int count, i = 0;
+  int count = 0;
 
-  for(; i<buffersize; ++i) {
- 		if (buffer[i] == '\0')
+  for (size_t i = 0; i<tokbufsize; ++i) {
+    if ('\0' == tokbuf[i]) {
       ++count;
+    }
   }
+
   return count;
 }
 
-int
-builtin(int argc, char *argv[], int fd)
+int 
+r_exec(const char* tokbuf, size_t tokbufsize, int fd)
 {
-	int rc, length = 0;
-	char *buffer;
-	int buffersize = 512;
+  int rc = -1;
+  int tokcount;
+  int argc;
+  char** argv;
 
-	buffer = malloc(buffersize);
+  tokcount = argccount(tokbuf, tokbufsize);
+  argv = malloc((tokcount + 1) * sizeof(char*));
 
-	if(!buffer)
+  if (!argv) {
 		return -1;
-	
-	memset(buffer, 0, buffersize);
+  }
+  
+  memset(argv, 0, sizeof argv);
+  argc = setargv(argv, tokbuf, tokbufsize, tokcount);
 
-	if(strncmp(argv[0], "ls", 2)) {
-		ls(argc, argv, fd);
-	} else {
-		rc = 1;
-	}
+  if (argc != tokcount) {
+		return -1;
+  }
 
-	if(length > 0)
-		write(fd, buffer, length);
+  rc = builtin(argc, argv, fd);
 
-	if(buffer)
-		free(buffer);
-	
-	return rc;
+  if (argv) {
+    free(argv);
+  }
+
+  return rc;
 }
 
-int
-r_exec(char *buffer, int buffersize, int fd)
+int 
+builtin(int argc, char** argv, int fd)
 {
-	int rc, argc, argvn;
-	char **argv;
-
-	argvn = argvlloc(buffer, buffersize);
-	argv = malloc((argvn + 1) * sizeof(char*));
-
-	if(!argv)
-		return -1;
-
-	memset(argv, 0, sizeof(*argv));
-	argc = argclloc(argv, buffer, buffersize, argvn);
-
-	if(argc != argvn) {
-		printf("Error on r_exec\n");
-		return -1;
-	}
-
-	rc = builtin(argc, argv, fd);
+  if (0 == strncmp(argv[0], "ls", 2)) 
+    ls(argc, argv, fd);
 	
-	if(argv)
-		free(argv);
 
-	return rc;
+  return 1;
 }
 
 int 
 server_loop(int client_fd, int log_fd)
 {
-	char *buffer;
-	int buffersize, rc;
+  char *buf;
+	int count;
 
-	buffersize = MAX;
+  buf = malloc(LINEMAX);
+  if (!buf) {
+    return 0;
+  }
 
-	buffer = malloc(buffersize);
-	if(!buffer) {
-		return 0;
-	}
+  while (1) {
+    memset(buf, 0, LINEMAX);
+    count = read(client_fd, buf, LINEMAX - 1);
+    if (0 == count) {
+  		printf("client hungup\n");
+      break;
+    } else if (count < 0) {
+    		printf("error on read\n");
+        break;
+    }
 
-	while(1) {
-		memset(buffer, 0, buffersize);
-		rc = read(client_fd, buffer, buffersize - 1);
-		if(rc == 0) {
-			printf("The client hungup\n");
-			break;
-		}
+    r_exec(buf, count, client_fd);
+    buf[0] = EOT;
+    write(client_fd, buf, 1);
+  }
 
-		if(rc < 0) {
-			printf("Error on read from server_loop");
-			break;
-		}
+  if (buf) {
+    free(buf);
+  }
 
-		r_exec(buffer, rc, client_fd);
-		buffer[0] = EOT;
-		write(client_fd, buffer, 1);
-	}
-		
-	if(buffer)
-		free(buffer);
-
-	return 0;
+  return 0;
 }
+
+

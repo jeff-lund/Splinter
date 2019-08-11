@@ -3,11 +3,11 @@ CFLAGS=-g -Wall
 
 all: server client
 
-server: server.o splintersh.o serverside.o splinter.o	connectioninfo.o myls.o
-	$(CC) $(CFLAGS)	-o server server.o splintersh.o serverside.o splinter.o	connectioninfo.o myls.o
+server: server.o serverside.o connectioninfo.o splintersh.o splinter.o ls.o
+	$(CC) $(CFLAGS)	-o $@ server.o serverside.o connectioninfo.o splintersh.o splinter.o ls.o
 
-client: client.o splintersh.o serverside.o splinter.o	connectioninfo.o myls.o
-	$(CC) $(CFLAGS)	-o client client.o splintersh.o serverside.o splinter.o	connectioninfo.o myls.o
+client: client.o serverside.o connectioninfo.o splintersh.o splinter.o ls.o
+	$(CC) $(CFLAGS)	-o $@ client.o serverside.o connectioninfo.o splintersh.o splinter.o ls.o
 
 clean:
 	rm *.o

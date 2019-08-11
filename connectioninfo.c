@@ -5,15 +5,12 @@
 #include <string.h>
 #include <getopt.h>
 #include <poll.h>
-#include "connectioninfo.h"
+#include <error.h>
+#include <errno.h>
+#include "splinter.h"
 
-#define LINEMAX 4096
+char *options = "a:p:";
 
-#define DEAFULT_HOST "10.0.0.69"
-#define DEAFULT_PORT "8080"
-
-
-static const char* options = "a:p:";
 
 struct server {
     const char* host;
@@ -93,54 +90,51 @@ int
 serverresponse(int server_fd)
 {
 	int rc = 0;
-	int finished;
-	int buffersize = LINEMAX;
-	int timeout = 5000;
-	char *buffer;
-	struct pollfd server;
-	
-	server.fd = server_fd;
-	server.events = POLLIN;
-	server.revents = 0;
+  ssize_t rc_b;
+  char* buf;
+  int timeout = 5000;
+  struct pollfd server;
 
-	buffer = malloc(buffersize);
+  server.fd = server_fd;
+  server.events = POLLIN;
+  server.revents = 0;
 
-	if(!buffer)
+
+  buf = malloc(LINEMAX);
+  if (!buf) {
 		return -1;
-	
-	while(!finished) {
-		int poll_server;
+  }
 
-		poll_server = poll(&server, 1, timeout);
+  while (1) {
+    int poll_rc;
+    poll_rc = poll(&server, 1, timeout);
 
-		if(poll_server == 0) {
-			printf("Error serverresponse(), poll returned 0, timed out");
-			finished = 1;
-		}
-		
-		if(poll_server < 0) {
-			printf("Error serverresponse(), poll returned greter then 1");
-			finished = 1;
-		}
+    if (poll_rc == 0) {
+			printf("error on poll timeout\n");
+			break;
+	  }	
+    if (poll_rc < 0) {
+			printf("error on poll()");
+			break;
+    } else {
+      memset(buf, 0, LINEMAX);
+      rc_b = read(server_fd, buf, LINEMAX - 1);
+      if (rc_b > 0) {
+        fprintf(stdout, "%s", buf);
+        if (EOT == buf[rc_b - 1]) {
+          rc = 0;
+					break;
+        }
+      } else {
+					printf("error on read() serverresponse()\n");
+					break;
+      }
+    } 
+  } 
 
-		else {
-			int server_r = 0;
-			memset(buffer, 0, buffersize);
-			server_r = read(server_fd, buffer, buffersize - 1);
-			if(server_r > 0) {
-				fprintf(stdout, "%s", buffer);
-				finished = 1;
-			}
-			
-			else {
-				printf("Issue with read in serverresponse()");
-				finished = 1;
-			}	
-		}
+  if(buf) {
+    free(buf);
 	}
-
-	if(buffer)
-		free(buffer);
-
-	return rc;
+    
+  return rc;
 }

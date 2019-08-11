@@ -7,7 +7,6 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include "splinter.h"
-#include "connectioninfo.h"
 
 #define _POSIX_SOURCE 1
 #define _XOPEN_SOURCE 600
@@ -145,4 +144,3 @@ s_accept(int sockfd)
 
 	return peer;
 }
-

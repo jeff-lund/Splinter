@@ -7,14 +7,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include "splinter.h"
-#include "connectioninfo.h"
-#include "serverside.h"
 
 #define _POSIX_SOURCE 1
 
-sig_atomic_t term;
-
-void sig_hand(int i) { term = 1; }
 
 int main(int argc, char* argv[])
 {
@@ -24,10 +19,7 @@ int main(int argc, char* argv[])
   int bufsize = 4096;
   struct server *server = 0;
   int backlog = 10;
-
-  signal(SIGINT, sig_hand);
-  signal(SIGTERM, sig_hand);
-  signal(SIGUSR1, sig_hand);
+	pid_t child;
 
   server = alloc_serverinfo();
   getconnectioninfo(server, argc, argv);
@@ -57,18 +49,21 @@ int main(int argc, char* argv[])
 
   fprintf(stderr, "pid: %d\n", getpid());
 
-  while (!term) {
+  while (1) {
     int peer;
     peer = s_accept(sock);
-      
-		if (peer > 0) {
-			printf("connected\n");
-			server_loop(peer, STDERR_FILENO);
-      close(peer);
+    if((child = fork()) == 0) {
+			while(1) { 
+				if (peer > 0) {
+					printf("connected\n");
+					server_loop(peer, STDERR_FILENO);
+		      close(peer);
+		    } else {
+			      break;   
+				}
+			}
     } 
-		else
-      break;   
-    } 
+	}
 
     fprintf(stderr, "good-bye.\n");
 
@@ -84,4 +79,3 @@ out:
 
   return 0;
 }
-
