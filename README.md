@@ -12,10 +12,10 @@ In order to this you will need to find your IPv4 Address under Wireless LAN adap
 
 Example:
 
-`./server -a 127.0.0.1 -p 5731`
+`./splinter start -a 127.0.0.1 -p 5731`
 
 Once the server has started up, you can connect the client to it the same way
 
 Exmaple:
 
-`./client -a 127.0.0.1 -p 5731`
+`./splinter connect -a 127.0.0.1 -p 5731`
