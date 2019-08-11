@@ -23,7 +23,7 @@ int connect_server(int argc, char** argv)
 	int sockfd = -1;
 	int n;
 	char buffer[LINEMAX];
-
+	int master_fd, slv_fd;
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
 
@@ -39,7 +39,7 @@ int connect_server(int argc, char** argv)
 		printf("Failed To Connect To Remote Host.\n");
 		goto error;
 	}
-
+	master_fd = posix_openpt(O_RDWR);
 	while(1)
 	{
 		if(poll(pl, 1, 100) < 0)
