@@ -177,6 +177,7 @@ create_pty(int peer)
     dup2(ptyslave, STDOUT_FILENO);
     dup2(ptyslave, STDERR_FILENO);
     execv("./shell", dummy_args);
+    //execv("./hello", dummy_args);
     error(EXIT_FAILURE, errno, "exec shell failed in child");
   }
 

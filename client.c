@@ -33,19 +33,44 @@ int connect_server(int argc, char** argv)
 
 	if(sockfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
-		goto error;
+		goto error1;
 	}
 	printf("Connected to server\n");
 	//client_pty(sockfd);
-	int n; char buffer[BUFSIZE];
-	struct pollfd pl[2];
-	dup2(sockfd, STDIN_FILENO);
-	pl[0].fd = sockfd;
-	pl[0].events = POLLIN;
+	int n;
+	char buffer[BUFSIZE];
+	pid_t pid2;
+	//struct pollfd pl[2];
+	//pl[0].fd = sockfd;
+	//pl[0].events = POLLIN;
 	//pl[1].fd = STDOUT_FILENO;
 	//pl[1].events = POLLOUT;
 	//pl[2].fd = STDIN_FILENO;
 	//pl[2].events = POLL;
+	pid2 = fork();
+	if(pid2 < 0)
+	{
+		error(EXIT_FAILURE, errno, "fork failed");
+	}
+	else if(pid2 == 0)
+	{
+		// child
+		while(1)
+		{
+			n = read(sockfd, buffer, BUFSIZE);
+			write(STDOUT_FILENO, buffer, n);
+		}
+	}
+	else
+	{
+		// parent
+		while(1)
+		{
+			n = read(STDIN_FILENO, buffer, BUFSIZE);
+			write(sockfd, buffer, n);
+		}
+	}
+	/*
 	while(1) {
 		if(poll(pl, 1, 0) < 0) {
 			break;
@@ -56,15 +81,14 @@ int connect_server(int argc, char** argv)
 			}
 			memset(buffer, 0, BUFSIZE);
 		}
-		/*
+
 		if(pl[0].revents & POLLOUT) {
 			printf("writing...\n");
 			n = read(STDIN_FILENO, buffer, BUFSIZE);
 			write(sockfd, buffer, n);
 		}
-		*/
-	}
-error:
+	}*/
+error1:
 	if(sockfd > 0)
 		close(sockfd);
 
