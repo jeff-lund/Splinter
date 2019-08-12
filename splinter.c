@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <error.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -59,7 +61,8 @@ s_bind(const char *host, const char *port)
 	  rc = bind(sock, i->ai_addr, i->ai_addrlen);
 
 	  if (rc < 0) {
-			fprintf(stderr, "(%s:%d) %s(), connect returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
+			//fprintf(stderr, "(%s:%d) %s(), connect returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
+			error(EXIT_FAILURE, errno, "bind failed");
 		  return -1;
   	}
 		else {
