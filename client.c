@@ -16,12 +16,16 @@
 #include "splinter.h"
 #include "connectioninfo.h"
 
-#define BUFSIZE 20
+#define BUFSIZE 4096
+#define NAMESIZE 20
 
 int connect_server(int argc, char** argv)
 {
 	struct server *server = 0;
 	int sockfd = -1;
+	int n;
+	char buffer[BUFSIZE];
+	pid_t pid2;
 
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
@@ -36,11 +40,7 @@ int connect_server(int argc, char** argv)
 		goto error;
 	}
 	printf("Connected to server\n");
-	//client_pty(sockfd);
-
-	int n;
-	char buffer[BUFSIZE];
-	pid_t pid2;
+	username(sockfd);
 	pid2 = fork();
 	if(pid2 < 0)
 	{
@@ -73,6 +73,15 @@ error:
 		free(server);
 
 	return 0;
+}
+
+void
+username(int fd)
+{
+	char name[NAMESIZE];
+	strncpy(name, getenv("USER"), NAMESIZE);
+	name[NAMESIZE - 1] = '\0';
+	write(fd, name, strlen(name));
 }
 
 // Not working, output messed up

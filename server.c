@@ -23,6 +23,8 @@
 
 #define _POSIX_SOURCE 1
 #define BUFSIZE 4096
+#define NAMESIZE 20
+
 sig_atomic_t term;
 sigjmp_buf jump;
 
@@ -36,13 +38,15 @@ int server_start(int argc, char* argv[])
 {
   int sock;
   int rc;
-  char* buf;
-  int bufsize = 4096;
-  struct server *server = 0;
+  int nread;
   int backlog = 10;
   int peer;
+  char* buf;
+  char uname[NAMESIZE];
+  struct server *server = 0;
   pid_t pid;
   pthread_t tid;
+
   signal(SIGINT, sig_hand);
   signal(SIGTERM, sig_hand);
   signal(SIGUSR1, sig_hand);
@@ -52,11 +56,11 @@ int server_start(int argc, char* argv[])
 
   sock = -1;
 
-  buf = malloc(bufsize);
+  buf = malloc(BUFSIZE);
   if (!buf) {
     goto out;
   }
-  memset(buf, 0, bufsize);
+  memset(buf, 0, BUFSIZE);
 
 	printf("%s\n", port(server));
 	printf("%s\n", host(server));
@@ -82,12 +86,14 @@ int server_start(int argc, char* argv[])
     setsockopt(peer, IPPROTO_TCP, TCP_NODELAY, (void *)&on, sizeof(int));
 		if (peer > 0) {
 			printf("connected\n");
-
+      if((nread = read(peer, buf, BUFSIZE)) < 0)
+        error(EXIT_FAILURE, errno, "read failed");
+      strncpy(uname, buf, NAMESIZE);
       if((pid = fork()) < 0) {
         error(EXIT_FAILURE, errno, "fork failed");
       }
       else if(pid == 0) {
-          create_pty(peer);
+          create_pty(peer, uname);
           exit(0);
       }
       else
@@ -127,15 +133,14 @@ thrd_fnc(void * arg)
 }
 
 void
-create_pty(int peer)
+create_pty(int peer, char *uname)
 {
   int ptyslave, ptymaster;
   int nread;
   char name[50], *nameptr;
   char buffer[BUFSIZE];
   pid_t pid;
-  char *dummy_args[1];
-  dummy_args[0] = NULL;
+  char *dummy_args[2] = {uname, NULL};
   // open PTY
   if((ptymaster = posix_openpt(O_RDWR | O_NOCTTY)) < 0) {
     // error in opening pty
