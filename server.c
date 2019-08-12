@@ -19,7 +19,6 @@
 
 #include "splinter.h"
 #include "connectioninfo.h"
-#include "serverside.h"
 #include "server.h"
 
 #define _POSIX_SOURCE 1
