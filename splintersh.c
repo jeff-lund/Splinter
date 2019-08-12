@@ -12,8 +12,6 @@
 #include <error.h>
 #include <errno.h>
 
-#include "connectioninfo.h"
-
 #define LINEMAX 4096
 #define FALSE 0
 #define TRUE 1
@@ -391,7 +389,7 @@ pipeExec(char ** cmds, int npipes)
 }
 
 int
-splinter(int sockfd)
+main(int argc, char **argv)
 {
   long MAX = sysconf(_SC_LINE_MAX);
   char buf[MAX];
@@ -401,23 +399,17 @@ splinter(int sockfd)
   int status;
   int n;
   int count;
-  char prompt[] = "$ ";
+  char prompt[] = "jeff <dir> $ ";
   char *argptr;
 
-  close(STDIN_FILENO);
-  close(STDOUT_FILENO);
-  close(STDERR_FILENO);
-  dup(sockfd);
-  dup(sockfd);
-  dup(sockfd);
-
   do {
-    write(sockfd, prompt, strlen(prompt));
+    write(STDOUT_FILENO, prompt, strlen(prompt));
     memset(buf, 0, MAX);
-    if((n = read(sockfd, buf, MAX)) == 0) {
+    if((n = read(STDIN_FILENO, buf, MAX)) == 0) {
       printf("use exit to exit shell\n");
       continue;
     }
+    write(STDOUT_FILENO, "received cmd\n", strlen("received cmd\n"));
     buf[strlen(buf) - 1] = '\0'; // chomp '\n'
 
     if(strncmp(buf, "rs ", 3) == 0) {
@@ -477,6 +469,6 @@ splinter(int sockfd)
     }
 
   } while(1);
-  close(sockfd);
+
   return 0;
 }

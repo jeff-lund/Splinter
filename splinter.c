@@ -60,9 +60,9 @@ s_bind(const char *host, const char *port)
 
 	  if (rc < 0) {
 			fprintf(stderr, "(%s:%d) %s(), connect returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
-		  close(sock);
-		  sock = -1;
-  	} else {
+		  return -1;
+  	}
+		else {
 		  struct sockaddr_in *socket_address = (struct sockaddr_in*)i->ai_addr;
 		  const char *host_name = 0;
 		  int port_num = 0;
@@ -117,10 +117,9 @@ s_connect(const char *host, const char *port, int sockettype)
 
 	  rc = connect(sock, i->ai_addr, i->ai_addrlen);
 	  if (rc < 0) {
-			printf("Error With Connecting, server.c line 113\n");
-		  close(sock);
-		  sock = -1;
-  	} else {
+			return -1;
+  	}
+		else {
   		break;
   	}
 	}
