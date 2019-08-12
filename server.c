@@ -103,7 +103,6 @@ int server_start(int argc, char* argv[])
       break;
     }
   }
-
   fprintf(stderr, "good-bye.\n");
 
 out:
@@ -199,7 +198,6 @@ create_pty(int peer)
       if((nread = read(ptymaster, buffer, BUFSIZE)) < 0) {
         error(EXIT_FAILURE, errno, "read failure from master pty failed");
       }
-      printf("Writing: %s\n", buffer);
       write(peer, buffer, nread);
       memset(buffer, 0, BUFSIZE);
     }

@@ -37,6 +37,7 @@ int connect_server(int argc, char** argv)
 	}
 	printf("Connected to server\n");
 	//client_pty(sockfd);
+
 	int n;
 	char buffer[BUFSIZE];
 	pid_t pid2;
@@ -47,7 +48,7 @@ int connect_server(int argc, char** argv)
 	}
 	else if(pid2 == 0)
 	{
-		// child
+		// child reads socket -> stdout
 		while(1)
 		{
 			n = read(sockfd, buffer, BUFSIZE);
@@ -56,13 +57,14 @@ int connect_server(int argc, char** argv)
 	}
 	else
 	{
-		// parent
+		// parent reads stdin -> socket
 		while(1)
 		{
 			n = read(STDIN_FILENO, buffer, BUFSIZE);
 			write(sockfd, buffer, n);
 		}
 	}
+
 error:
 	if(sockfd > 0)
 		close(sockfd);
@@ -73,6 +75,7 @@ error:
 	return 0;
 }
 
+// Not working, output messed up
 void
 client_pty(int sockfd)
 {
@@ -80,9 +83,7 @@ client_pty(int sockfd)
 	int nread;
 	char buffer[BUFSIZE];
 	char *nameptr, name[50];
-	pid_t pid;
-	struct pollfd pl[2];
-	struct termios term;
+	pid_t pid, pid2;
 	// set up ptys
 	if((masterfd = posix_openpt(O_RDWR)) < 0) {
 		fprintf(stderr, "failed to aquire master pty on client\n");
@@ -106,64 +107,58 @@ client_pty(int sockfd)
   {
 		// child
 		// slave, gets input from master, sends to socket
-    //setsid();
+    setsid();
     // open pty slave
     if((slavefd = open(name, O_RDWR)) < 0) {
       error(EXIT_FAILURE, errno, "failed to open pty slave");
     }
 		close(masterfd);
-		pl[0].fd = slavefd;
-		pl[0].events = POLLIN;
-		pl[1].fd = sockfd;
-		pl[1].events = POLLIN;
 
-		while(1) {
-			if(poll(pl, 2, 0) < 0) {
-				break;
-			}
-
-			if(pl[0].revents | POLLIN) {
+		pid2 = fork();
+		if(pid2 < 0)
+			error(EXIT_FAILURE, errno, "fork failed");
+		else if(pid2 == 0)
+		{
+			while(1) {
 				// slave -> socket
 				nread = read(slavefd, buffer, BUFSIZE);
 				write(sockfd, buffer, nread);
 			}
-			if(pl[1].revents | POLLIN) {
+		}
+		else
+		{
+			while(1)
+			{
 				// socket -> slave
 				nread = read(sockfd, buffer, BUFSIZE);
 				write(slavefd, buffer, nread);
 			}
 		}
+
 		close(slavefd);
 		exit(0);
 	}
 	// master
 	// gets input from user, sends to slave
 	// reads from slave and outputs to screen
-	tcgetattr(masterfd, &term);
-	term.c_cc[VMIN]  = 1;
-	term.c_cc[VTIME] = 0;
-	tcsetattr(masterfd, TCSAFLUSH, &term);
-
-	while(1)
+	pid2 = fork();
+	if(pid2 < 0)
+		error(EXIT_FAILURE, errno, 0);
+	else if(pid2 == 0)
 	{
-		if(poll(pl, 1, 0) < 0)
+		while(1)
 		{
-			break;
-		}
-
-		if(pl[0].revents & POLLOUT)
-		{
-			// get input from user
 			nread = read(STDIN_FILENO, buffer, BUFSIZE);
 			write(sockfd, buffer, nread);
 			memset(buffer, 0, BUFSIZE);
 		}
-		if(pl[0].revents & POLLIN) {
-			while((nread = recv(sockfd, buffer, BUFSIZE, MSG_DONTWAIT)) > 0)
-			{
-				write(STDOUT_FILENO, buffer, nread);
-			}
-			memset(buffer, 0, BUFSIZE);
+	}
+	else
+	{
+		while(1)
+		{
+			nread = read(sockfd, buffer, BUFSIZE);
+			write(STDOUT_FILENO, buffer, nread);
 		}
 	}
 }

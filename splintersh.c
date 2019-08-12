@@ -409,7 +409,6 @@ main(int argc, char **argv)
       printf("use exit to exit shell\n");
       continue;
     }
-    write(STDOUT_FILENO, "received cmd\n", strlen("received cmd\n"));
     buf[strlen(buf) - 1] = '\0'; // chomp '\n'
 
     if(strncmp(buf, "rs ", 3) == 0) {
