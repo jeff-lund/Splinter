@@ -136,7 +136,6 @@ create_pty(int peer)
   char name[50], *nameptr;
   char buffer[BUFSIZE];
   pid_t pid;
-  struct pollfd pl[1];
   char *dummy_args[1];
   dummy_args[0] = NULL;
   // open PTY
@@ -177,7 +176,6 @@ create_pty(int peer)
     dup2(ptyslave, STDOUT_FILENO);
     dup2(ptyslave, STDERR_FILENO);
     execv("./shell", dummy_args);
-    //execv("./hello", dummy_args);
     error(EXIT_FAILURE, errno, "exec shell failed in child");
   }
 
