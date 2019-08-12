@@ -294,6 +294,7 @@ freeList(char **optList)
   while(*ptr)
   {
     free(*ptr);
+    ++ptr;
   }
   free(optList);
 }
@@ -339,11 +340,6 @@ Exec(char *buf)
     }
     free(path);
   }
-  /*
-  for(int i = 0; optList[i]; ++i)
-    free(optList[i]);
-  free(optList);
-  */
   freeList(optList);
   globfree(&gl);
 }
@@ -441,14 +437,14 @@ main(int argc, char **argv)
 {
   long MAX = sysconf(_SC_LINE_MAX);
   char buf[MAX];
-  char **pipes, **ptr;
+  char **pipes, **ptr, **args;
   pid_t pid;
-  struct rusage resource;
   int status;
   int n;
   int count;
   char prompt[] = "jeff <dir> $ ";
-  char *argptr;
+  struct rusage resource;
+  glob_t gl;
 
   do {
     write(STDOUT_FILENO, prompt, strlen(prompt));
@@ -484,19 +480,25 @@ main(int argc, char **argv)
     }
     else if(strncmp(buf, "cd", 2) == 0)
     {
-      // change directory
-      argptr = buf + 2;
-      if(*argptr == '\0')
+      args = parseArgs(buf);
+      if(args[1] == NULL)
       {
+        // just have ["cd", NULL], go to home dir
         Chdir(getenv("HOME"));
-        continue;
       }
-      else if(*argptr == ' ')
+      else if(args[2] == NULL)
       {
-        ++argptr;
-        Chdir(argptr);
-        continue;
+        // only have two arguments, change dir to second arg
+        globify(args, &gl);
+        Chdir(gl.gl_pathv[1]);
+        globfree(&gl);
       }
+      else
+      {
+        Error(0, errno, "too many arguments to cd");
+      }
+      freeList(args);
+      continue;
     }
     // Run other commands
     pid = Fork();
