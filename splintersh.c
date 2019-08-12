@@ -14,6 +14,7 @@
 #include <glob.h>
 
 #define LINEMAX 4096
+#define PROMPT_SIZE 100
 #define FALSE 0
 #define TRUE 1
 
@@ -27,13 +28,27 @@ exitbuiltin() {
   exit(EXIT_SUCCESS);
 }
 
+int
+globon() {
+  doGlob = TRUE;
+  return 0;
+}
+
+int
+globoff() {
+  doGlob = FALSE;
+  return 0;
+}
+
 typedef struct {
   char *cmd;
   funcPtr *name;
 } dTable;
 
 dTable fdt[] = {
-  {"_exit", exitbuiltin}
+  {"_exit", exitbuiltin},
+  {"_globon", globon},
+  {"_globoff", globoff}
 };
 
 void
@@ -319,9 +334,11 @@ Exec(char *buf)
   glob_t gl;
 
   optList = parseArgs(buf);
-  globify(optList, &gl);
-  if(directPath(optList[0]))
-    execv(optList[0], gl.gl_pathv);
+  if(doGlob)
+    globify(optList, &gl);
+  if(directPath(optList[0])) {
+    execv(optList[0], doGlob ? gl.gl_pathv : optList);
+  }
   else {
     length = strlen(optList[0]);
     strMalloc(&path, sizeof(char) * (strlen(getenv("PATH")) + 1));
@@ -333,7 +350,7 @@ Exec(char *buf)
       strMalloc(&cmd, sizeof(char) * (length + strlen(tok) + 2));
       createPath(cmd, tok, optList[0]);
       if(access(cmd, F_OK) == 0)
-        execv(cmd, gl.gl_pathv);
+        execv(cmd, doGlob ? gl.gl_pathv : optList);
 
       free(cmd);
       tok = strtok(NULL, delim);
@@ -341,7 +358,8 @@ Exec(char *buf)
     free(path);
   }
   freeList(optList);
-  globfree(&gl);
+  if(doGlob)
+    globfree(&gl);
 }
 
 static int
@@ -432,24 +450,36 @@ pipeExec(char ** cmds, int npipes)
   }
 }
 
+void
+makePrompt(char *prompt, char *name)
+{
+    char cwd[LINEMAX];
+    getcwd(cwd, LINEMAX);
+    sprintf(prompt, "%s: %s $ ", name, cwd);
+}
+
 int
 main(int argc, char **argv)
 {
-  long MAX = sysconf(_SC_LINE_MAX);
-  char buf[MAX];
+  char buf[LINEMAX];
+  char *name;
   char **pipes, **ptr, **args;
   pid_t pid;
   int status;
   int n;
   int count;
-  char prompt[] = "jeff <dir> $ ";
+  char prompt[PROMPT_SIZE];
   struct rusage resource;
   glob_t gl;
 
+  if(argc > 0)
+    name = argv[0];
+
   do {
+    makePrompt(prompt, name);
     write(STDOUT_FILENO, prompt, strlen(prompt));
-    memset(buf, 0, MAX);
-    if((n = read(STDIN_FILENO, buf, MAX)) == 0) {
+    memset(buf, 0, LINEMAX);
+    if((n = read(STDIN_FILENO, buf, LINEMAX)) == 0) {
       printf("use exit to exit shell\n");
       continue;
     }
@@ -489,9 +519,11 @@ main(int argc, char **argv)
       else if(args[2] == NULL)
       {
         // only have two arguments, change dir to second arg
-        globify(args, &gl);
+        if(doGlob)
+          globify(args, &gl);
         Chdir(gl.gl_pathv[1]);
-        globfree(&gl);
+        if(doGlob)
+          globfree(&gl);
       }
       else
       {
