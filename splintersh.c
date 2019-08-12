@@ -11,6 +11,7 @@
 #include <sys/time.h>
 #include <error.h>
 #include <errno.h>
+#include <glob.h>
 
 #define LINEMAX 4096
 #define FALSE 0
@@ -19,6 +20,7 @@
 typedef int funcPtr(char *);
 
 int USE_ACCOUNTING = FALSE;
+int doGlob = TRUE;
 
 int
 exitbuiltin() {
@@ -61,6 +63,38 @@ Error(int status, int errnum, char *msg)
   write(STDERR_FILENO, errmsg, strlen(errmsg));
 
   exit(status);
+}
+
+void
+globify(char **args, glob_t *globber)
+{
+    int nargs = 0;
+    char **ptr;
+    ptr = args;
+    while(*ptr)
+    {
+      ++nargs;
+      ++ptr;
+    }
+
+    if(nargs == 0)
+      return;
+
+    globber->gl_offs = 0;
+    if(glob(args[0],
+            GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC,
+            NULL, globber) < 0)
+    {
+        Error(EXIT_FAILURE, errno, "glob failed");
+    }
+    for(int i = 1; i < nargs; ++i)
+    {
+        glob(args[i],
+             GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_APPEND,
+             NULL, globber);
+    }
+
+    return;
 }
 
 // Malloc for strings with error handling
@@ -219,7 +253,7 @@ directPath(char *buf)
 
 // Splits up a buffered command into substrings to isolate optional
 // argument flags from the base command
-// e.g. "ls -l" becomes ["ls", "-l"]
+// e.g. "ls -l" becomes ["ls", "-l", NULL]
 // Return: Pointer to array of dynamically allocated strings
 static char**
 parseArgs(char *buf)
@@ -252,6 +286,17 @@ parseArgs(char *buf)
   return list;
 }
 
+void
+freeList(char **optList)
+{
+  char **ptr;
+  ptr = optList;
+  while(*ptr)
+  {
+    free(*ptr);
+  }
+  free(optList);
+}
 // Concatenates p1 with p2 into path, adding a seperator (/) between
 static void
 createPath(char *path, char *p1, char *p2)
@@ -270,10 +315,12 @@ Exec(char *buf)
   char *delim = ":"; // delimiter used by strtok for path
   char **optList; // arguments for execv
   unsigned int length;
+  glob_t gl;
 
   optList = parseArgs(buf);
+  globify(optList, &gl);
   if(directPath(optList[0]))
-    execv(optList[0], optList);
+    execv(optList[0], gl.gl_pathv);
   else {
     length = strlen(optList[0]);
     strMalloc(&path, sizeof(char) * (strlen(getenv("PATH")) + 1));
@@ -285,16 +332,20 @@ Exec(char *buf)
       strMalloc(&cmd, sizeof(char) * (length + strlen(tok) + 2));
       createPath(cmd, tok, optList[0]);
       if(access(cmd, F_OK) == 0)
-        execv(cmd, optList);
+        execv(cmd, gl.gl_pathv);
 
       free(cmd);
       tok = strtok(NULL, delim);
     }
     free(path);
   }
+  /*
   for(int i = 0; optList[i]; ++i)
     free(optList[i]);
   free(optList);
+  */
+  freeList(optList);
+  globfree(&gl);
 }
 
 static int
@@ -329,9 +380,6 @@ Chdir(char *path)
       perror(strerror(errno));
     }
 }
-
-void
-globify(){ ;}
 
 void
 pipeExec(char ** cmds, int npipes)
@@ -436,10 +484,11 @@ main(int argc, char **argv)
     }
     else if(strncmp(buf, "cd", 2) == 0)
     {
+      // change directory
       argptr = buf + 2;
       if(*argptr == '\0')
       {
-        Chdir("/");
+        Chdir(getenv("HOME"));
         continue;
       }
       else if(*argptr == ' ')
