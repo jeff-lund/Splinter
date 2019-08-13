@@ -6,8 +6,9 @@
 
 int main(int argc, char **argv)
 {
-  if(argc == 1)
-    printf("Usage: Splinter <start|connect> -a <ip address> -p <port>\n");
+  if(argc == 1) {
+    printf("Usage: ./splinter <start|connect> -a <ip address> -p <port>\n");
+  }
   else if(argc > 1)
   {
     if(strcmp(argv[1], "start") == 0) {
@@ -17,7 +18,8 @@ int main(int argc, char **argv)
       connect_server(argc, argv);
     }
     else {
-      printf("Unknown option %s\n", argv[1]);
+      printf("Unknown option %s.\n", argv[1]);
+      printf("Usage: /splinter <start|connect> -a <ip address> -p <port>\n");
     }
   }
   return 0;
