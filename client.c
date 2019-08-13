@@ -11,7 +11,9 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <wait.h>
+#include <pthread.h>
 
+#include "thread_read.h"
 #include "client.h"
 #include "splinter.h"
 #include "connectioninfo.h"
@@ -20,39 +22,11 @@
 #define NAMESIZE 20
 static volatile sig_atomic_t eof = 0;
 
-void
-sigterm(int signo)
-{
-	eof = 1;
-}
-
-void
-sigpipe(int signo)
-{
-	eof = 1;
-}
-
 int connect_server(int argc, char** argv)
 {
 	int sockfd = -1;
-	int n;
-	char buffer[BUFSIZE];
-	pid_t pid;
-
+	struct descriptors *fds;
 	struct server *server = 0;
-	// sigpipe not working
-	sigset_t set;
-	struct sigaction sa;
-	sigemptyset(&set);
-	sa.sa_handler = sigpipe;
-	sa.sa_mask = set;
-	sa.sa_flags = 0;
-	if(sigaction(SIGPIPE, &sa, NULL) < 0)
-		error(EXIT_FAILURE, errno, "sigaction failed");
-	// handle sigterm
-	sa.sa_handler = sigterm;
-	if(sigaction(SIGTERM, &sa, NULL) < 0)
-		error(EXIT_FAILURE, errno, "sigaction failed");
 
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
@@ -69,45 +43,20 @@ int connect_server(int argc, char** argv)
 	printf("Connected to server\n");
 	// write username to server
 	username(sockfd);
-	// fork off processes to read and write
-	pid = fork();
-	if(pid < 0)
-	{
-		error(EXIT_FAILURE, errno, "fork failed");
-	}
-	else if(pid == 0)
-	{
-		pid = getppid();
-		printf("Parent pid: %d\n", pid);
-		// child reads socket -> stdout
-		while(!eof)
-		{
-			if((n = read(sockfd, buffer, BUFSIZE)) <= 0)
-				break;
-			if(write(STDOUT_FILENO, buffer, n) < 0)
-				break;
-		}
-		printf("child exiting\n");
-		exit(0);
-	}
-	else
-	{
-		printf("child pid: %d\n", pid);
-		// parent reads stdin -> socket
-		while(!eof)
-		{
-			// stuck in this loop
-			if((n = read(STDIN_FILENO, buffer, BUFSIZE)) <= 0)
-				break;
-			if(write(sockfd, buffer, n) < 0)
-			{
-				break;
-			}
-		}
-		printf("parent exiting\n");
-		kill(pid, SIGTERM);
-		wait(0);
-	}
+	pthread_t tidp1, tidp2;
+
+	// passes output from server to stdout
+	fds = malloc(sizeof(struct descriptors));
+	fds->read_in = sockfd;
+	fds->write_out = STDOUT_FILENO;
+	pthread_create(&tidp1, NULL, thrd_reader, (void *)fds);
+	// passes input from stdin to the server
+	fds = malloc(sizeof(struct descriptors));
+	fds->read_in = STDIN_FILENO;
+	fds->write_out = sockfd;
+	pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
+	pthread_join(tidp1, NULL);
+	pthread_join(tidp2, NULL);
 
 error:
 	if(sockfd > 0)

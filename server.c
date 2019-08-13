@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -12,14 +13,13 @@
 #include <setjmp.h>
 #include <sys/wait.h>
 #include <sys/types.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <poll.h>
 #include <fcntl.h>
 
 #include "splinter.h"
 #include "connectioninfo.h"
 #include "server.h"
+#include "thread_read.h"
 
 #define _POSIX_SOURCE 1
 #define BUFSIZE 4096
@@ -78,12 +78,10 @@ int server_start(int argc, char* argv[])
   }
 
   fprintf(stderr, "pid: %d\n", getpid());
+  // when server recieves signal return to start of loop to terminate
   sigsetjmp(jump, 0);
   while (!term) {
-
-    int on = 1;
     peer = s_accept(sock);
-    setsockopt(peer, IPPROTO_TCP, TCP_NODELAY, (void *)&on, sizeof(int));
 		if (peer > 0) {
 			printf("connected\n");
       if((nread = read(peer, buf, BUFSIZE)) < 0)
@@ -93,18 +91,19 @@ int server_start(int argc, char* argv[])
         error(EXIT_FAILURE, errno, "fork failed");
       }
       else if(pid == 0) {
+          // fork off new process to create psuedoterminal
+          // and exec a shell for the client
           create_pty(peer, uname);
           exit(0);
       }
-      else
-      {
-        pthread_create(&tid, NULL, &thrd_fnc, (void *)&pid);
+      else {
+        // create a thread to wait for the child
+        pthread_create(&tid, NULL, &thrd_wait, (void *)&pid);
         sleep(1);
         close(peer);
       }
     }
-		else
-    {
+		else{
       break;
     }
   }
@@ -123,24 +122,15 @@ out:
   return 0;
 }
 
-void*
-thrd_fnc(void * arg)
-{
-  int pid = *(int *)arg;
-  waitpid(pid, NULL, 0);
-  printf("Thread closed, %d\n", pid);
-  pthread_exit(NULL);
-}
-
 void
 create_pty(int peer, char *uname)
 {
   int ptyslave, ptymaster;
-  int nread;
   char name[50], *nameptr;
-  char buffer[BUFSIZE];
-  pid_t pid, pid2;
-  char *dummy_args[2] = {uname, NULL};
+  char *shell_args[2] = {uname, NULL};
+  pid_t pid;
+  struct descriptors *fds;
+  pthread_t tidp1, tidp2;
   // open PTY
   if((ptymaster = posix_openpt(O_RDWR | O_NOCTTY)) < 0) {
     // error in opening pty
@@ -167,44 +157,37 @@ create_pty(int peer, char *uname)
   }
   else if(pid == 0)
   {
-    // child
+    // child opens pty slave
     setsid();
-    // open pty slave
     if((ptyslave = open(name, O_RDWR)) < 0) {
       error(EXIT_FAILURE, errno, "failed to open pty slave");
     }
+    // close the master fd and reroute all regular I/O fds to the salve fd
     close(ptymaster);
     dup2(ptyslave, STDIN_FILENO);
     dup2(ptyslave, STDOUT_FILENO);
     dup2(ptyslave, STDERR_FILENO);
-    execv("./shell", dummy_args);
+    execv("./shell", shell_args);
     error(EXIT_FAILURE, errno, "exec shell failed in child");
-  }
-
-  // Master
-  pid2 = fork();
-  if(pid2 == 0)
-  {
-    // CHILD reads pollin
-    while(1) {
-      if((nread = read(peer, buffer, BUFSIZE)) < 0) {
-        error(EXIT_FAILURE, errno, "read failure from socket to master pty");
-      }
-      write(ptymaster, buffer, nread);
-    }
   }
   else
   {
-    // PARENT writes
-    while(1) {
-      if((nread = read(ptymaster, buffer, BUFSIZE)) < 0)
-        break;
-      write(peer, buffer, nread);
-      memset(buffer, 0, BUFSIZE);
-    }
+    // Master process
+    // passes input from client into pty
+    fds = malloc(sizeof(struct descriptors));
+    fds->read_in = peer;
+    fds->write_out = ptymaster;
+    pthread_create(&tidp1, NULL, thrd_reader, (void *)fds);
+    // passes output from pty to the client
+    fds = malloc(sizeof(struct descriptors));
+    fds->read_in = ptymaster;
+    fds->write_out = peer;
+    pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
+
+    pthread_join(tidp1, NULL);
+    pthread_join(tidp2, NULL);
   }
-  
-  close(ptyslave);
-  close(ptymaster);
+  waitpid(pid, 0, 0);
+
   return;
 }

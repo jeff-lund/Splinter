@@ -551,6 +551,6 @@ main(int argc, char **argv)
     }
 
   } while(1);
-
+  write(STDOUT_FILENO, 0, 1);
   return 0;
 }
