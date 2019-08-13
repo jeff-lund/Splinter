@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include <poll.h>
 #include <fcntl.h>
-#include <termios.h>
+#include <wait.h>
 
 #include "client.h"
 #include "splinter.h"
@@ -18,14 +18,41 @@
 
 #define BUFSIZE 4096
 #define NAMESIZE 20
+static volatile sig_atomic_t eof = 0;
+
+void
+sigterm(int signo)
+{
+	eof = 1;
+}
+
+void
+sigpipe(int signo)
+{
+	eof = 1;
+}
 
 int connect_server(int argc, char** argv)
 {
-	struct server *server = 0;
 	int sockfd = -1;
 	int n;
 	char buffer[BUFSIZE];
-	pid_t pid2;
+	pid_t pid;
+
+	struct server *server = 0;
+	// sigpipe not working
+	sigset_t set;
+	struct sigaction sa;
+	sigemptyset(&set);
+	sa.sa_handler = sigpipe;
+	sa.sa_mask = set;
+	sa.sa_flags = 0;
+	if(sigaction(SIGPIPE, &sa, NULL) < 0)
+		error(EXIT_FAILURE, errno, "sigaction failed");
+	// handle sigterm
+	sa.sa_handler = sigterm;
+	if(sigaction(SIGTERM, &sa, NULL) < 0)
+		error(EXIT_FAILURE, errno, "sigaction failed");
 
 	server = alloc_serverinfo();
 	getconnectioninfo(server, argc, argv);
@@ -40,29 +67,46 @@ int connect_server(int argc, char** argv)
 		goto error;
 	}
 	printf("Connected to server\n");
+	// write username to server
 	username(sockfd);
-	pid2 = fork();
-	if(pid2 < 0)
+	// fork off processes to read and write
+	pid = fork();
+	if(pid < 0)
 	{
 		error(EXIT_FAILURE, errno, "fork failed");
 	}
-	else if(pid2 == 0)
+	else if(pid == 0)
 	{
+		pid = getppid();
+		printf("Parent pid: %d\n", pid);
 		// child reads socket -> stdout
-		while(1)
+		while(!eof)
 		{
-			n = read(sockfd, buffer, BUFSIZE);
-			write(STDOUT_FILENO, buffer, n);
+			if((n = read(sockfd, buffer, BUFSIZE)) <= 0)
+				break;
+			if(write(STDOUT_FILENO, buffer, n) < 0)
+				break;
 		}
+		printf("child exiting\n");
+		exit(0);
 	}
 	else
 	{
+		printf("child pid: %d\n", pid);
 		// parent reads stdin -> socket
-		while(1)
+		while(!eof)
 		{
-			n = read(STDIN_FILENO, buffer, BUFSIZE);
-			write(sockfd, buffer, n);
+			// stuck in this loop
+			if((n = read(STDIN_FILENO, buffer, BUFSIZE)) <= 0)
+				break;
+			if(write(sockfd, buffer, n) < 0)
+			{
+				break;
+			}
 		}
+		printf("parent exiting\n");
+		kill(pid, SIGTERM);
+		wait(0);
 	}
 
 error:
@@ -130,16 +174,19 @@ client_pty(int sockfd)
 		{
 			while(1) {
 				// slave -> socket
-				nread = read(slavefd, buffer, BUFSIZE);
+				if((nread = read(slavefd, buffer, BUFSIZE)) <0)
+					break;
 				write(sockfd, buffer, nread);
 			}
+			exit(0);
 		}
 		else
 		{
 			while(1)
 			{
 				// socket -> slave
-				nread = read(sockfd, buffer, BUFSIZE);
+				if((nread = read(sockfd, buffer, BUFSIZE)) < 0)
+					break;
 				write(slavefd, buffer, nread);
 			}
 		}
@@ -157,17 +204,21 @@ client_pty(int sockfd)
 	{
 		while(1)
 		{
-			nread = read(STDIN_FILENO, buffer, BUFSIZE);
+			if((nread = read(STDIN_FILENO, buffer, BUFSIZE)) < 0)
+				break;
 			write(sockfd, buffer, nread);
 			memset(buffer, 0, BUFSIZE);
 		}
+		exit(0);
 	}
 	else
 	{
 		while(1)
 		{
-			nread = read(sockfd, buffer, BUFSIZE);
+			if((nread = read(sockfd, buffer, BUFSIZE)) < 0)
+				break;
 			write(STDOUT_FILENO, buffer, nread);
 		}
+		exit(0);
 	}
 }

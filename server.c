@@ -139,7 +139,7 @@ create_pty(int peer, char *uname)
   int nread;
   char name[50], *nameptr;
   char buffer[BUFSIZE];
-  pid_t pid;
+  pid_t pid, pid2;
   char *dummy_args[2] = {uname, NULL};
   // open PTY
   if((ptymaster = posix_openpt(O_RDWR | O_NOCTTY)) < 0) {
@@ -162,7 +162,6 @@ create_pty(int peer, char *uname)
   }
   strncpy(name, nameptr, 50);
 
-
   if((pid = fork()) < 0) {
     error(EXIT_FAILURE, errno, "fork failed");
   }
@@ -183,7 +182,6 @@ create_pty(int peer, char *uname)
   }
 
   // Master
-  pid_t pid2;
   pid2 = fork();
   if(pid2 == 0)
   {
@@ -199,23 +197,14 @@ create_pty(int peer, char *uname)
   {
     // PARENT writes
     while(1) {
-      if((nread = read(ptymaster, buffer, BUFSIZE)) < 0) {
-        error(EXIT_FAILURE, errno, "read failure from master pty failed");
-      }
+      if((nread = read(ptymaster, buffer, BUFSIZE)) < 0)
+        break;
       write(peer, buffer, nread);
       memset(buffer, 0, BUFSIZE);
     }
   }
-
+  
+  close(ptyslave);
   close(ptymaster);
   return;
 }
-/*
-void thr_read(void * arg) {
-
-}
-
-void thr_write(void *arg) {
-
-}
-*/
