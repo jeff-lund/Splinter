@@ -55,8 +55,9 @@ int connect_server(int argc, char** argv)
 	fds->read_in = STDIN_FILENO;
 	fds->write_out = sockfd;
 	pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
+
 	pthread_join(tidp1, NULL);
-	pthread_join(tidp2, NULL);
+	pthread_cancel(tidp2);
 
 error:
 	if(sockfd > 0)

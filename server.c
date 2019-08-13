@@ -84,9 +84,11 @@ int server_start(int argc, char* argv[])
     peer = s_accept(sock);
 		if (peer > 0) {
 			printf("connected\n");
+      // get user name from new connection
       if((nread = read(peer, buf, BUFSIZE)) < 0)
         error(EXIT_FAILURE, errno, "read failed");
       strncpy(uname, buf, NAMESIZE);
+
       if((pid = fork()) < 0) {
         error(EXIT_FAILURE, errno, "fork failed");
       }
@@ -183,11 +185,12 @@ create_pty(int peer, char *uname)
     fds->read_in = ptymaster;
     fds->write_out = peer;
     pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
-
-    pthread_join(tidp1, NULL);
-    pthread_join(tidp2, NULL);
+    waitpid(pid, 0, 0);
+    pthread_cancel(tidp1);
+    pthread_cancel(tidp2);
   }
-  waitpid(pid, 0, 0);
+  close(ptymaster);
+
 
   return;
 }
