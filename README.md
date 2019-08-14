@@ -2,13 +2,11 @@
 
 ## To build
 
-In order to build *Splinter*, just use type `make` and you will have a *client* and *server* made for you to use.
+In order to build *Splinter*, just use type `make` and you will have a *splinter* made for you to use.
 
 ## To run,
 
-In order to run *Splinter*, you have to start up the *server* first.
-
-In order to this you will need to find your IPv4 Address under Wireless LAN adapter Wi-Fi
+In order to run *Splinter*, you will need to use your IPv4 Address for the connection address.
 
 Example:
 
