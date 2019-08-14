@@ -20,7 +20,7 @@
 typedef int funcPtr(char *);
 
 int USE_ACCOUNTING = FALSE;
-int doGlob = TRUE;
+int doGlob = 1;
 
 int
 exitbuiltin() {
@@ -29,13 +29,13 @@ exitbuiltin() {
 
 int
 globon() {
-  doGlob = TRUE;
+  doGlob = 1;
   return 0;
 }
 
 int
 globoff() {
-  doGlob = FALSE;
+  doGlob = 0;
   return 0;
 }
 
@@ -52,8 +52,7 @@ dTable fdt[] = {
 
 void
 dobuiltin(char *cmd) {
-  int i;
-  for(i=0; i<1; i++) {
+  for(int i = 0; i < 3; ++i) {
     if(strncmp(cmd, fdt[i].cmd, strlen(fdt[i].cmd)) == 0)
       (*fdt[i].name)(cmd);
   }
@@ -550,6 +549,6 @@ main(int argc, char **argv)
     }
 
   } while(1);
-  
+
   return 0;
 }
