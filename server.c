@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <termios.h>
 
 #include "splinter.h"
 #include "connectioninfo.h"
@@ -101,6 +102,7 @@ int server_start(int argc, char* argv[])
       else {
         // create a thread to wait for the child
         pthread_create(&tid, NULL, &thrd_wait, (void *)&pid);
+        pthread_detach(tid);
         sleep(1);
         close(peer);
       }
@@ -132,16 +134,19 @@ create_pty(int peer, char *uname)
   pid_t pid;
   struct descriptors *fds;
   pthread_t tidp1, tidp2;
+
   // open PTY
   if((ptymaster = posix_openpt(O_RDWR | O_NOCTTY)) < 0) {
     // error in opening pty
     close(peer);
     error(EXIT_FAILURE, errno, "failure when opening pty");
   }
+
   if(grantpt(ptymaster) < 0) {
     close(peer);
     error(EXIT_FAILURE, errno, "grantpt failed");
   }
+
   if(unlockpt(ptymaster) < 0) {
     close(peer);
     error(EXIT_FAILURE, errno, "unlockpt failed");
@@ -158,16 +163,30 @@ create_pty(int peer, char *uname)
   }
   else if(pid == 0)
   {
+    struct termios st;
     // child opens pty slave
     setsid();
     if((ptyslave = open(name, O_RDWR)) < 0) {
       error(EXIT_FAILURE, errno, "failed to open pty slave");
     }
-    // close the master fd and reroute all regular I/O fds to the salve fd
+    // close the master fd and reroute all regular I/O fds to the slave fd
     close(ptymaster);
-    dup2(ptyslave, STDIN_FILENO);
-    dup2(ptyslave, STDOUT_FILENO);
-    dup2(ptyslave, STDERR_FILENO);
+    if(dup2(ptyslave, STDIN_FILENO) < 0)
+      error(EXIT_FAILURE, errno, "dup2 failed");
+    if(dup2(ptyslave, STDOUT_FILENO) < 0)
+      error(EXIT_FAILURE, errno, "dup2 failed");
+    if(dup2(ptyslave, STDERR_FILENO) < 0)
+      error(EXIT_FAILURE, errno, "dup2 failed");
+
+    // Turn off echoing -
+    // noecho function from Advanced Programming in the Linux Environment pg731
+    if(tcgetattr(ptyslave, &st) < 0)
+      error(EXIT_FAILURE, errno, "get termio attr failed");
+    st.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL);
+    st.c_oflag &= ~(ONLCR);
+    if(tcsetattr(ptyslave, TCSANOW, &st) < 0)
+      error(EXIT_FAILURE, errno, "set termio attr failed");
+    // Ready to exec the shell, all communication is routed throught the pty
     execv("./shell", shell_args);
     error(EXIT_FAILURE, errno, "exec shell failed in child");
   }
@@ -175,15 +194,19 @@ create_pty(int peer, char *uname)
   {
     // Master process
     // passes input from client into pty
-    fds = malloc(sizeof(struct descriptors));
+    if((fds = malloc(sizeof(struct descriptors))) < 0)
+      error(EXIT_FAILURE, errno, "malloc failed");
     fds->read_in = peer;
     fds->write_out = ptymaster;
-    pthread_create(&tidp1, NULL, thrd_reader, (void *)fds);
+    if(pthread_create(&tidp1, NULL, thrd_reader, (void *)fds) != 0)
+      error(EXIT_FAILURE, errno, "thread creation failed");
+
     // passes output from pty to the client
     fds = malloc(sizeof(struct descriptors));
     fds->read_in = ptymaster;
     fds->write_out = peer;
-    pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
+    if(pthread_create(&tidp2, NULL, thrd_reader, (void *)fds) < 0)
+      error(EXIT_FAILURE, errno, "thread creation failed");
     waitpid(pid, 0, 0);
     pthread_cancel(tidp1);
     pthread_cancel(tidp2);

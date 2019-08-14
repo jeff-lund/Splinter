@@ -9,7 +9,7 @@
 
 #include "thread_read.h"
 
-#define BUFSIZE 1024
+#define BUFSIZE 4096
 
 void
 clean_thrd(void *arg)

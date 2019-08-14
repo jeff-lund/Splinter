@@ -20,9 +20,9 @@
 
 #define BUFSIZE 4096
 #define NAMESIZE 20
-static volatile sig_atomic_t eof = 0;
 
-int connect_server(int argc, char** argv)
+int
+connect_server(int argc, char** argv)
 {
 	int sockfd = -1;
 	pthread_t tidp1, tidp2;
@@ -44,17 +44,22 @@ int connect_server(int argc, char** argv)
 	printf("Connected to server\n");
 	// write username to server
 	username(sockfd);
-	
+
 	// passes output from server to stdout
-	fds = malloc(sizeof(struct descriptors));
+	if((fds = malloc(sizeof(struct descriptors))) < 0)
+		error(EXIT_FAILURE, errno, "malloc failed");
 	fds->read_in = sockfd;
 	fds->write_out = STDOUT_FILENO;
-	pthread_create(&tidp1, NULL, thrd_reader, (void *)fds);
+	if(pthread_create(&tidp1, NULL, thrd_reader, (void *)fds) != 0)
+		error(EXIT_FAILURE, errno, "thread creation failed");
+
 	// passes input from stdin to the server
-	fds = malloc(sizeof(struct descriptors));
+	if((fds = malloc(sizeof(struct descriptors))) < 0)
+		error(EXIT_FAILURE, errno, "malloc failed");
 	fds->read_in = STDIN_FILENO;
 	fds->write_out = sockfd;
-	pthread_create(&tidp2, NULL, thrd_reader, (void *)fds);
+	if(pthread_create(&tidp2, NULL, thrd_reader, (void *)fds) != 0)
+		error(EXIT_FAILURE, errno, "thread creation failed");
 
 	pthread_join(tidp1, NULL);
 	pthread_cancel(tidp2);
