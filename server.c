@@ -58,7 +58,7 @@ int server_start(int argc, char* argv[])
 
   buf = malloc(BUFSIZE);
   if (!buf) {
-    goto out;
+		return 0;
   }
   memset(buf, 0, BUFSIZE);
 
@@ -68,13 +68,13 @@ int server_start(int argc, char* argv[])
 	sock = s_bind(host(server), port(server));
   if (sock < 0) {
 		printf("error on bind() when binding to host and port\n");
-    goto out;
+		return 0;
   }
 
   rc = s_listen(sock, backlog);
   if (rc < 0) {
 		printf("Listen() returned when listening to sock.\n");
-    goto out;
+		return 0;
   }
 
   fprintf(stderr, "pid: %d\n", getpid());
@@ -111,7 +111,6 @@ int server_start(int argc, char* argv[])
   }
   fprintf(stderr, "good-bye.\n");
 
-out:
   if(sock > 0)
     close(sock);
 

@@ -39,7 +39,7 @@ int connect_server(int argc, char** argv)
 
 	if(sockfd < 0) {
 		printf("Failed To Connect To Remote Host.\n");
-		goto error;
+		return 0;
 	}
 	printf("Connected to server\n");
 	// write username to server
@@ -59,7 +59,6 @@ int connect_server(int argc, char** argv)
 	pthread_join(tidp1, NULL);
 	pthread_cancel(tidp2);
 
-error:
 	if(sockfd > 0)
 		close(sockfd);
 

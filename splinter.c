@@ -61,7 +61,6 @@ s_bind(const char *host, const char *port)
 	  rc = bind(sock, i->ai_addr, i->ai_addrlen);
 
 	  if (rc < 0) {
-			//fprintf(stderr, "(%s:%d) %s(), connect returned: %d\n", __FILE__, __LINE__, __FUNCTION__, rc);
 			error(EXIT_FAILURE, errno, "bind failed");
 		  return -1;
   	}
@@ -75,7 +74,7 @@ s_bind(const char *host, const char *port)
 			  memset(buf, 0, 1024);
 			  host_name = inet_ntop(i->ai_family, &socket_address->sin_addr, buf, 1024);
 			  port_num = ntohs(socket_address->sin_port);
-			  fprintf(stderr, "Binded Successfuly With Host: %s Port: %d)\n", host_name, port_num);
+				printf("Binded Successfuly With Host: %s Port: %d)\n", host_name, port_num);
 			  free(buf);
   		}
   		break;
@@ -139,7 +138,7 @@ s_accept(int sockfd)
   struct sockaddr_in peer_socketadd;
   socklen_t peer_socketadd_size = sizeof(struct sockaddr_in);
   peer = accept(sockfd, (struct sockaddr*)&peer_socketadd, &peer_socketadd_size);
-  if (peer < 0) {
+  if (peer > 0) {
 		printf("Accepted\n");
   }
 

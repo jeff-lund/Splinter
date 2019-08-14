@@ -38,7 +38,7 @@ getconnectioninfo(struct server *server, int argc, char *argv[])
 	int optc;
 
 	if(!server)
-		goto error;
+		return -1;
 
 	while((optc = getopt(argc, argv, options)) != -1) {
 		if('?' == optc) {
@@ -46,8 +46,7 @@ getconnectioninfo(struct server *server, int argc, char *argv[])
 		}
 		setparams(server, optc, optarg);
 	}
-error:
-	return -1;
+	return 0;
 }
 
 int
@@ -55,7 +54,7 @@ setparams(struct server *server, int opt, char *arg)
 {
 
 	if(!server)
-		goto error;
+		return -1;
 
 	switch(opt) {
 		case 'a':	server->host = arg; break;
@@ -63,9 +62,7 @@ setparams(struct server *server, int opt, char *arg)
 		default: break;
 	}
 
-error:
-	return -1;
-
+	return 0;
 }
 
 const char *
