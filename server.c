@@ -212,7 +212,5 @@ create_pty(int peer, char *uname)
     pthread_cancel(tidp2);
   }
   close(ptymaster);
-
-
   return;
 }
